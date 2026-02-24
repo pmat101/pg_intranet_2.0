@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <base target="_top" />
+    <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
+    <?!= HtmlService.createHtmlOutputFromFile('sharedComponents').getContent();
+    ?>
+  </head>
+  <body>
+    <div id="f_test"></div>
+    <div id="f_selects"></div>
+
+    <script>
+      const c = document.getElementById("f_test");
+      renderField(c, {
+        label: "Project Name",
+        id: "project_name",
+        required: true,
+        placeholder: "Enter project name",
+      });
+      renderField(c, {
+        label: "Client Email",
+        id: "client_email",
+        type: "email",
+        placeholder: "user@domain.com",
+        helper: "Enter official client email",
+      });
+
+      // create the select element using the shared template helper
+      const selContainer = document.getElementById("f_selects");
+      const stateSelect = renderField(selContainer, {
+        // creates a labeled <select id="state"> and returns the DOM <select> element (to populate it)
+        label: "State / UT",
+        id: "state",
+        type: "select",
+        required: true,
+        helper: "Choose state code, e.g., GJ",
+      });
+      const sectorSelect = renderField(selContainer, {
+        label: "Sector",
+        id: "sector",
+        type: "select",
+        required: true,
+        helper: "Choose sector code, e.g., 5f",
+      });
+
+      const pcodeInput = renderField(c, {
+        label: "PCODE",
+        id: "pcode",
+        placeholder: "Enter PCODE to auto-fill",
+      });
+
+      pcodeInput.addEventListener("blur", function () {
+        autoPrefillFromProject(this.value.trim());
+      });
+
+      function autoPrefillFromProject(pcode) {
+        if (!pcode) return;
+
+        google.script.run
+          .withSuccessHandler(function (project) {
+            if (!project) {
+              alert("No project found for this PCODE");
+              return;
+            }
+
+            // Loop through all keys returned from server
+            Object.keys(project).forEach(function (key) {
+              // Loops through: pcode, project_name, client, sector, state etc
+              const field = document.getElementById(key); // If input id matches column name — it auto-fills
+
+              if (!field) return; // If form doesn't have this field, skip
+
+              // Handle select differently
+              if (field.tagName === "SELECT") {
+                // Only set value if option exists
+                const exists = Array.from(field.options).some(
+                  (o) => o.value == project[key],
+                );
+                if (exists) field.value = project[key];
+              } else {
+                field.value = project[key];
+              }
+            });
+          })
+          .getProjectByPcode(pcode);
+      }
+
+      // populate select from server dropdown data
+      google.script.run
+        .withSuccessHandler(function (data) {
+          let list = data.states || []; // clear any existing options
+          stateSelect.innerHTML = ""; // clears any stray options, then we append a placeholder + the actual state options
+          stateSelect.appendChild(new Option("Select state", ""));
+          list.forEach((s) => stateSelect.appendChild(new Option(s, s)));
+
+          list = data.sector || [];
+          sectorSelect.innerHTML = "";
+          sectorSelect.appendChild(new Option("Select sector", ""));
+          list.forEach((s) => sectorSelect.appendChild(new Option(s, s)));
+        })
+        .getDropdownData(); // calls the server function and gives arrays (states, sectors, companies)
+    </script>
+  </body>
+</html>
