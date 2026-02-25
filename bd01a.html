@@ -1,82 +1,181 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <base target="_top" />
+    <title>BD01-A</title>
+
+    <!-- shared styling & components (must exist) -->
     <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
     <?!= HtmlService.createHtmlOutputFromFile('sharedComponents').getContent();
     ?>
   </head>
   <body>
-    <div id="f_test"></div>
-    <div id="f_selects"></div>
+    <div class="form-wrapper">
+      <div class="form-title">BD01-A</div>
+      <div class="form-subtitle">
+        To be filled by BD Team before offer is sent
+      </div>
+
+      <!-- top area: project prefill -->
+      <div id="prefill-area"></div>
+
+      <!-- place where selects and other grouped fields go -->
+      <div id="f_selects"></div>
+
+      <!-- place where regular fields go -->
+      <div id="f_fields"></div>
+
+      <!-- subform container (if this form has repeating lines) -->
+      <div class="form-section">
+        <div class="section-heading">Team / Lines</div>
+        <div id="teamBody"></div>
+        <button type="button" class="btn-secondary" id="addTeamBtn">
+          + Add row
+        </button>
+      </div>
+
+      <div style="margin-top: 20px">
+        <button class="btn-primary" id="submitBtn">Submit</button>
+        <span id="status" class="text-muted" style="margin-left: 12px"></span>
+      </div>
+    </div>
 
     <script>
-      const c = document.getElementById("f_test");
-      renderField(c, {
-        label: "Project Name",
-        id: "project_name",
-        required: true,
-        placeholder: "Enter project name",
-      });
-      renderField(c, {
-        label: "Client Email",
-        id: "client_email",
-        type: "email",
-        placeholder: "user@domain.com",
-        helper: "Enter official client email",
-      });
+      // -------------------------
+      // IMPORTANT: set the FORM CODE here (lowercase used on sheet names by convention)
+      // -------------------------
+      const FORM_CODE = "bd01a"; // change when you copy this file for a new form
 
-      // create the select element using the shared template helper
-      const selContainer = document.getElementById("f_selects");
-      const stateSelect = renderField(selContainer, {
-        // creates a labeled <select id="state"> and returns the DOM <select> element (to populate it)
-        label: "State / UT",
-        id: "state",
-        type: "select",
-        required: true,
-        helper: "Choose state code, e.g., GJ",
-      });
-      const sectorSelect = renderField(selContainer, {
-        label: "Sector",
-        id: "sector",
-        type: "select",
-        required: true,
-        helper: "Choose sector code, e.g., 5f",
-      });
+      // create two containers we will use everywhere (convention)
+      const c = document.getElementById("f_fields"); // general fields container
+      const selContainer = document.getElementById("f_selects"); // selects and grouped controls
 
+      // -------------------------
+      // Common fields (render using sharedComponents.renderField)
+      // IDs must match column headers in <formcode>_main sheet and/or projects sheet
+      // -------------------------
+      // Example: PCODE (used by all forms to prefill)
       const pcodeInput = renderField(c, {
         label: "PCODE",
         id: "pcode",
         placeholder: "Enter PCODE to auto-fill",
       });
 
+      // Example: project_name and client_name (these IDs should match projects sheet header)
+      /*
+            ST/UT (Required - Dropdown)
+          Type of Work (Required - Dropdown)
+            Other (Conditional text box)
+          Service Type/ Code/ NABET Sector (Dropdown)
+          Specifications (Required - Dropdown)
+          Financial Year (Required - Dropdown)
+          Perfact group company name (Required - Dropdown)
+          If others(specify) (Text box)
+          Customer Classification (Required - Options: New Customer, Existing Customer, Other)
+          Other (Conditional text box)
+          Lead Source (Required - Dropdown)
+          Other (Conditional text box)
+          Upload RFQ or Scope of Work document (File Upload)
+        Section 3: Additional Information & Submission
+          Name (First Name, Last Name)
+          Email
+          Remarks
+          Signature (E-Signature Field)
+      */
+      renderField(c, {
+        label: "Date of Client's Mail/ Lead Generation (Required)",
+        id: "lead_date",
+        type: "date",
+        placeholder: "dd/mm/yyyy",
+      });
+      renderField(c, {
+        label: "Name of Form Filler (First Name, Last Name)",
+        id: "filler_name",
+        placeholder: "Enter your name",
+      });
+      renderField(c, {
+        label: "Email of Form Filler",
+        id: "filler_email",
+        type: "email",
+        placeholder: "Enter your email",
+      });
+      renderField(c, {
+        label: "Customer's Company Legal Name (Required)",
+        id: "customer_company",
+        placeholder: "Enter customer's company legal name",
+      });
+      renderField(c, {
+        label: "Customer Name (First Name, Last Name)",
+        id: "customer_name",
+        placeholder: "Enter customer's name",
+      });
+      renderField(c, {
+        label: "Customer contact number",
+        id: "customer_contact",
+        type: "tel",
+        placeholder: "Enter customer contact number",
+      });
+      renderField(c, {
+        label: "Customer Email (Required)",
+        id: "customer_email",
+        type: "email",
+        placeholder: "Enter customer email",
+      });
+      renderField(c, {
+        label: "Is it a repeat customer? (Options: YES, NO)",
+        id: "repeat_customer",
+        type: "select",
+        helper: "Select if the customer is a repeat customer",
+      });
+      renderField(c, {
+        label: "Type of Activity Proposed",
+        id: "activity_type",
+        placeholder: "Enter type of activity proposed",
+      });
+      renderField(c, {
+        label: "Proposed Project Location (Tentative)",
+        id: "project_location",
+        placeholder:
+          "Village, Taluka, District, State/Region/Province, Postal / Zip Code",
+      });
+
+      // Example selects
+      const stateSelect = renderField(selContainer, {
+        label: "State / UT",
+        id: "state",
+        type: "select",
+        helper: "Choose state",
+      });
+      const sectorSelect = renderField(selContainer, {
+        label: "Sector",
+        id: "sector",
+        type: "select",
+        helper: "Choose sector",
+      });
+
+      // -------------------------
+      // Prefill: when pcode is entered call the generic server function
+      // -------------------------
       pcodeInput.addEventListener("blur", function () {
-        autoPrefillFromProject(this.value.trim());
+        const v = this.value && this.value.trim();
+        if (!v) return;
+        autoPrefillFromProject(v); // universal client prefill (server function: getProjectByPcode)
       });
 
       function autoPrefillFromProject(pcode) {
-        if (!pcode) return;
-
         google.script.run
           .withSuccessHandler(function (project) {
             if (!project) {
-              alert("No project found for this PCODE");
+              document.getElementById("status").innerText = "No project found";
               return;
             }
-
-            // Loop through all keys returned from server
             Object.keys(project).forEach(function (key) {
-              // Loops through: pcode, project_name, client, sector, state etc
-              const field = document.getElementById(key); // If input id matches column name — it auto-fills
-
-              if (!field) return; // If form doesn't have this field, skip
-
-              // Handle select differently
+              const field = document.getElementById(key);
+              if (!field) return;
               if (field.tagName === "SELECT") {
-                // Only set value if option exists
+                // set only if option exists
                 const exists = Array.from(field.options).some(
                   (o) => o.value == project[key],
                 );
@@ -85,24 +184,93 @@
                 field.value = project[key];
               }
             });
+            document.getElementById("status").innerText =
+              "Prefilled from projects";
           })
           .getProjectByPcode(pcode);
       }
 
-      // populate select from server dropdown data
+      // -------------------------
+      // Populate selects (one call for dropdowns)
+      // -------------------------
       google.script.run
         .withSuccessHandler(function (data) {
-          let list = data.states || []; // clear any existing options
-          stateSelect.innerHTML = ""; // clears any stray options, then we append a placeholder + the actual state options
+          // data: { states:[], sectors:[], companies:[] }
+          stateSelect.innerHTML = "";
           stateSelect.appendChild(new Option("Select state", ""));
-          list.forEach((s) => stateSelect.appendChild(new Option(s, s)));
+          (data.states || []).forEach((s) =>
+            stateSelect.appendChild(new Option(s, s)),
+          );
 
-          list = data.sector || [];
           sectorSelect.innerHTML = "";
           sectorSelect.appendChild(new Option("Select sector", ""));
-          list.forEach((s) => sectorSelect.appendChild(new Option(s, s)));
+          (data.sectors || []).forEach((s) =>
+            sectorSelect.appendChild(new Option(s, s)),
+          );
         })
-        .getDropdownData(); // calls the server function and gives arrays (states, sectors, companies)
+        .getDropdownData();
+
+      // -------------------------
+      // Subform: add/remove + collect
+      // -------------------------
+      document
+        .getElementById("addTeamBtn")
+        .addEventListener("click", function () {
+          // re-use the subform template (sharedComponents has tmpl-subform-row)
+          addSubformRow("teamBody", [
+            "Coordinator",
+            "Team Lead",
+            "Deputy TL",
+            "Member",
+            "Intern",
+          ]);
+        });
+
+      function collectTeamRows() {
+        const rows = Array.from(
+          document.querySelectorAll("#teamBody .subform-row"),
+        );
+        return rows
+          .map((r) => ({
+            name: (r.querySelector(".member_name") || {}).value || "",
+            role: (r.querySelector(".member_role") || {}).value || "",
+            email: (r.querySelector(".member_email") || {}).value || "",
+          }))
+          .filter((x) => x.name || x.email); // skip empty rows
+      }
+
+      // -------------------------
+      // Generic submit (client)
+      // -------------------------
+      document
+        .getElementById("submitBtn")
+        .addEventListener("click", function () {
+          const payload = {
+            // any fields you want to include — follow the ID convention
+            pcode: (document.getElementById("pcode") || {}).value || "",
+            project_name:
+              (document.getElementById("project_name") || {}).value || "",
+            client_name:
+              (document.getElementById("client_name") || {}).value || "",
+            state: (document.getElementById("state") || {}).value || "",
+            sector: (document.getElementById("sector") || {}).value || "",
+            // lines (if any)
+            team: collectTeamRows(),
+          };
+
+          // generic server call: submitForm handles persist + notification
+          google.script.run
+            .withSuccessHandler(function (res) {
+              document.getElementById("status").innerText =
+                "Submitted: " + (res.submission_id || res.pcode || "OK");
+              // optionally disable button or redirect after success
+            })
+            .withFailureHandler(function (err) {
+              document.getElementById("status").innerText =
+                "Submit failed: " + err.message;
+            })
+            .submitForm(FORM_CODE.toUpperCase(), payload);
+        });
     </script>
   </body>
 </html>
