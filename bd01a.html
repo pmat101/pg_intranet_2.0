@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BD-01(A)</title>
+    <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
+  </head>
+  <body>
+    <div class="form-wrapper">
+      <div class="form-title">
+        BD-01(A) - To be filled by BD Team before offer is sent
+      </div>
+      <div class="form-subtitle">
+        Capture client and project details before sending offer
+      </div>
+      <div class="form-section">
+        <div class="form-group">
+          <label class="form-label">Date <span class="required">*</span></label>
+          <input type="date" id="visit-date" />
+          <div class="helper-text">dd-mm-yyyy</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-col">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input type="text" />
+            </div>
+          </div>
+          <div class="form-col">
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input type="text" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary">Submit</button>
+    </div>
+    <script>
+      google.script.run
+        .withSuccessHandler(function (data) {
+          const sel = document.getElementById("state");
+          if (!sel) return;
+          sel.appendChild(new Option("Select state", ""));
+          (data.states || []).forEach((s) => sel.appendChild(new Option(s, s)));
+        })
+        .getDropdownData();
+    </script>
+  </body>
+</html>

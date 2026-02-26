@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BD-01(A)</title>
+    <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
+  </head>
+  <body>
+    <h2>PG Intranet - Home</h2>
+    <p>Quick links to forms:</p>
+    <ul>
+      <li><a href="<?= scriptUrl ?>?page=bd01a" target="_top">BD-01(A)</a></li>
+      <li><a href="<?= scriptUrl ?>?page=bd01b" target="_top">BD-01(B)</a></li>
+      <li><a href="<?= scriptUrl ?>?page=bd02" target="_top">BD-02</a></li>
+    </ul>
+    <p>
+      Open the links above or paste the WebApp URL with `?page=pageName` to go
+      straight to a specific form.
+    </p>
+  </body>
+</html>
