@@ -6,22 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BD-01(A)</title>
     <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
+    <link rel="stylesheet" href="sharedStyles.css" />
   </head>
   <body>
     <div class="form-wrapper">
-      <div class="form-title">
-        BD-01(A) - To be filled by BD Team before offer is sent
-      </div>
+      <div class="form-title">BD-01(A)</div>
       <div class="form-subtitle">
-        Capture client and project details before sending offer
+        To be filled by BD Team before offer is sent
       </div>
       <div class="form-section">
         <div class="form-group">
-          <label class="form-label">Date <span class="required">*</span></label>
+          <label class="form-label"
+            >Date of Client's Mail/ Lead Generation
+            <span class="required">*</span></label
+          >
           <input type="date" id="visit-date" />
           <div class="helper-text">dd-mm-yyyy</div>
         </div>
 
+        <h4>Name of the Form Filler</h4>
         <div class="form-row">
           <div class="form-col">
             <div class="form-group">
@@ -35,6 +38,153 @@
               <input type="text" />
             </div>
           </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Official Email ID <span class="required">*</span></label
+          >
+          <input type="email" />
+        </div>
+        <h2>Customer Details</h2>
+        <div class="form-group">
+          <label class="form-label"
+            >Customer's Company Legal Name
+            <span class="required">*</span></label
+          >
+          <input type="text" />
+        </div>
+        <h4>Customer Name</h4>
+        <div class="form-row">
+          <div class="form-col">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input type="text" />
+            </div>
+          </div>
+          <div class="form-col">
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input type="text" />
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Customer Contact Number <span class="required">*</span></label
+          >
+          <input type="tel" />
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Customer Email <span class="required">*</span></label
+          >
+          <input type="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Is it a repeat customer?</label>
+          <div class="form-row">
+            <div class="form-col-choice">
+              <input type="radio" id="repeat-yes" name="repeat" value="yes" />
+              <label for="repeat-yes">YES</label>
+            </div>
+            <div class="form-col-choice">
+              <input type="radio" id="repeat-no" name="repeat" value="no" />
+              <label for="repeat-no">NO</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Type of Activity Proposed <span class="required">*</span></label
+          >
+          <input type="text" />
+        </div>
+
+        <h4>Proposed Project Location (Tentative)</h4>
+        <div class="form-row">
+          <div class="form-col">
+            <div class="form-group">
+              <label class="form-label">Village</label>
+              <input type="text" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Taluka</label>
+              <input type="text" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">District</label>
+              <input type="text" />
+            </div>
+          </div>
+          <div class="form-col">
+            <div class="form-group">
+              <label class="form-label">State/Region/Province</label>
+              <input type="text" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Postal / Zip Code</label>
+              <input type="text" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country</label>
+              <select id="country"></select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >ST/UT <span class="required">*</span></label
+          >
+          <select id="state"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Type of Work <span class="required">*</span></label
+          >
+          <select id="work-type"></select>
+          <div class="helper-text">Select from Index sheet</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Service Type/ Code/ NABET Sector</label>
+          <select id="service-type"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Specifications <span class="required">*</span></label
+          >
+          <select id="specifications"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Financial Year <span class="required">*</span></label
+          >
+          <select id="financial-year"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Perfact group company name <span class="required">*</span></label
+          >
+          <select id="group-company"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Customer Classification <span class="required">*</span></label
+          >
+          <select id="customer-classification"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Lead Source <span class="required">*</span></label
+          >
+          <select id="lead-source"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Upload RFQ or Scope of Work document</label>
+          <input type="file" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Remarks</label>
+          <textarea></textarea>
         </div>
       </div>
       <button class="btn-primary">Submit</button>

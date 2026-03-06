@@ -14,16 +14,16 @@
 
 7.  Add server endpoints `getDropdownData()` in **config.gs**. Add client snippet to populate `select` field
 
+8.  Add `getNextProjectSerial()` and `genProposalIDnPCODE ()` in **Code.gs** to get serial number, generatae Proposal ID and PCODE
+
 ---
 
-4.  Add `getNextProjectSerial()` and `genProposalIDnPCODE ()` in **Code.gs** to get serial number, generatae Proposal ID and PCODE
+9.  Create **bd01a.html** with styles using **sharedStyles.html** and dropdowns using **config.gs**
 
-5.  Create **bd01a.html** with styles using **sharedStyles.html** and dropdowns using **config.gs**
-
-6.  Add field template to **sharedComponents.html**
-7.  Add `renderField()` to **sharedComponents.html**, it gives input DOM nodes using template for further wiring on the frontend
-8.  Create a `<select>` using `renderField()` inside a form file and populate it from the server `getDropdownData()` endpoint
-9.
+10. Add field template to **sharedComponents.html**
+11. Add `renderField()` to **sharedComponents.html**, it gives input DOM nodes using template for further wiring on the frontend
+12. Create a `<select>` using `renderField()` inside a form file and populate it from the server `getDropdownData()` endpoint
+13.
 
 ---
 
