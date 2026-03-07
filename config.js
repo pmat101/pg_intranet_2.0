@@ -41,7 +41,7 @@ function getDropdownData() {
       "Uttarakhand",
       "West Bengal",
     ],
-    typeofWork: [
+    workType: [
       "AAM",
       "ADR",
       "AIR",
@@ -557,7 +557,7 @@ function getDropdownData() {
       "Zambia",
       "Zimbabwe",
     ],
-    stateCode: [
+    stUt: [
       "AP",
       "AR",
       "AS",

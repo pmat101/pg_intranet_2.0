@@ -16,11 +16,11 @@
       </div>
       <div class="form-section">
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="lead-date"
             >Date of Client's Mail/ Lead Generation
             <span class="required">*</span></label
           >
-          <input type="date" id="visit-date" />
+          <input type="date" id="lead-date" />
           <div class="helper-text">dd-mm-yyyy</div>
         </div>
 
@@ -28,57 +28,65 @@
         <div class="form-row">
           <div class="form-col">
             <div class="form-group">
-              <label class="form-label">First Name</label>
-              <input type="text" />
+              <label class="form-label" for="form-filler-first-name"
+                >First Name</label
+              >
+              <input type="text" id="form-filler-first-name" />
             </div>
           </div>
           <div class="form-col">
             <div class="form-group">
-              <label class="form-label">Last Name</label>
-              <input type="text" />
+              <label class="form-label" for="form-filler-last-name"
+                >Last Name</label
+              >
+              <input type="text" id="form-filler-last-name" />
             </div>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="official-email"
             >Official Email ID <span class="required">*</span></label
           >
-          <input type="email" />
+          <input type="email" id="official-email" />
         </div>
         <h2>Customer Details</h2>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="customer-company"
             >Customer's Company Legal Name
             <span class="required">*</span></label
           >
-          <input type="text" />
+          <input type="text" id="customer-company" />
         </div>
         <h4>Customer Name</h4>
         <div class="form-row">
           <div class="form-col">
             <div class="form-group">
-              <label class="form-label">First Name</label>
-              <input type="text" />
+              <label class="form-label" for="customer-first-name"
+                >First Name</label
+              >
+              <input type="text" id="customer-first-name" />
             </div>
           </div>
           <div class="form-col">
             <div class="form-group">
-              <label class="form-label">Last Name</label>
-              <input type="text" />
+              <label class="form-label" for="customer-last-name"
+                >Last Name</label
+              >
+              <input type="text" id="customer-last-name" />
             </div>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="customer-contact"
             >Customer Contact Number <span class="required">*</span></label
           >
-          <input type="tel" />
+          <input type="tel" id="customer-contact" />
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="customer-email"
             >Customer Email <span class="required">*</span></label
           >
-          <input type="email" />
+          <input type="email" id="customer-email" />
         </div>
         <div class="form-group">
           <label class="form-label">Is it a repeat customer?</label>
@@ -94,110 +102,246 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="activity-proposed"
             >Type of Activity Proposed <span class="required">*</span></label
           >
-          <input type="text" />
+          <input type="text" id="activity-proposed" />
         </div>
 
         <h4>Proposed Project Location (Tentative)</h4>
         <div class="form-row">
           <div class="form-col">
             <div class="form-group">
-              <label class="form-label">Village</label>
-              <input type="text" />
+              <label class="form-label" for="village">Village</label>
+              <input type="text" id="village" />
             </div>
             <div class="form-group">
-              <label class="form-label">Taluka</label>
-              <input type="text" />
+              <label class="form-label" for="taluka">Taluka</label>
+              <input type="text" id="taluka" />
             </div>
             <div class="form-group">
-              <label class="form-label">District</label>
-              <input type="text" />
+              <label class="form-label" for="district">District</label>
+              <input type="text" id="district" />
             </div>
           </div>
           <div class="form-col">
             <div class="form-group">
-              <label class="form-label">State/Region/Province</label>
-              <input type="text" />
+              <label class="form-label" for="state"
+                >State/Region/Province</label
+              >
+              <input type="text" id="state" />
             </div>
             <div class="form-group">
-              <label class="form-label">Postal / Zip Code</label>
-              <input type="text" />
+              <label class="form-label" for="postal-code"
+                >Postal / Zip Code</label
+              >
+              <input type="text" id="postal-code" />
             </div>
             <div class="form-group">
-              <label class="form-label">Country</label>
+              <label class="form-label" for="country">Country</label>
               <select id="country"></select>
             </div>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="st-ut"
             >ST/UT <span class="required">*</span></label
           >
-          <select id="state"></select>
+          <select id="st-ut"></select>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="work-type"
             >Type of Work <span class="required">*</span></label
           >
           <select id="work-type"></select>
           <div class="helper-text">Select from Index sheet</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Service Type/ Code/ NABET Sector</label>
-          <select id="service-type"></select>
+          <label class="form-label" for="sector"
+            >Service Type/ Code/ NABET Sector</label
+          >
+          <select id="sector"></select>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="specs"
             >Specifications <span class="required">*</span></label
           >
-          <select id="specifications"></select>
+          <select id="specs"></select>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="fin-year"
             >Financial Year <span class="required">*</span></label
           >
-          <select id="financial-year"></select>
+          <select id="fin-year">
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+            <option value="2029">2029</option>
+            <option value="2030">2030</option>
+            <option value="2031">2031</option>
+            <option value="2032">2032</option>
+          </select>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="pg-company"
             >Perfact group company name <span class="required">*</span></label
           >
-          <select id="group-company"></select>
+          <select id="pg-company"></select>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="customer-class"
             >Customer Classification <span class="required">*</span></label
           >
-          <select id="customer-classification"></select>
+          <select id="customer-class">
+            <option value="new">New Customer</option>
+            <option value="existing">Existing Customer</option>
+          </select>
         </div>
         <div class="form-group">
-          <label class="form-label"
+          <label class="form-label" for="lead-source"
             >Lead Source <span class="required">*</span></label
           >
-          <select id="lead-source"></select>
+          <select id="lead-source">
+            <option value="pb">Mr. Praveen Bhargava</option>
+            <option value="rb">Mrs. Rachna Bhargava</option>
+            <option value="nb">Dr. Nipun Bhargava</option>
+            <option value="rd">Mrs. Rachna Dogra</option>
+            <option value="gmk">Mr. Muthukumaran Ganpathi Narayanan</option>
+            <option value="ag">Mrs. Aarti Gupta</option>
+          </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Upload RFQ or Scope of Work document</label>
-          <input type="file" />
+          <label class="form-label" for="rfq"
+            >Upload RFQ or Scope of Work document</label
+          >
+          <input type="file" id="rfq" />
         </div>
         <div class="form-group">
-          <label class="form-label">Remarks</label>
-          <textarea></textarea>
+          <label class="form-label" for="remarks">Remarks</label>
+          <textarea id="remarks"></textarea>
         </div>
       </div>
-      <button class="btn-primary">Submit</button>
+      <button class="btn-primary" onclick="submitBD01A()">Submit</button>
     </div>
+    <div id="status" style="margin-top: 16px"></div>
     <script>
       google.script.run
         .withSuccessHandler(function (data) {
-          const sel = document.getElementById("state");
-          if (!sel) return;
-          sel.appendChild(new Option("Select state", ""));
-          (data.states || []).forEach((s) => sel.appendChild(new Option(s, s)));
+          const country = document.getElementById("country");
+          data.country.forEach((c) => {
+            const option = document.createElement("option");
+            option.value = option.text = c;
+            country.appendChild(option);
+          });
+          const stUt = document.getElementById("st-ut");
+          data.stUt.forEach((s) => {
+            const option = document.createElement("option");
+            option.value = option.text = s;
+            stUt.appendChild(option);
+          });
+          const workType = document.getElementById("work-type");
+          data.workType.forEach((w) => {
+            const option = document.createElement("option");
+            option.value = option.text = w;
+            workType.appendChild(option);
+          });
+          const sector = document.getElementById("sector");
+          data.sector.forEach((s) => {
+            const option = document.createElement("option");
+            option.value = option.text = s;
+            sector.appendChild(option);
+          });
+          const specs = document.getElementById("specs");
+          data.specs.forEach((s) => {
+            const option = document.createElement("option");
+            option.value = option.text = s;
+            specs.appendChild(option);
+          });
+          const pgCompany = document.getElementById("pg-company");
+          data.pgCompany.forEach((p) => {
+            const option = document.createElement("option");
+            option.value = option.text = p;
+            pgCompany.appendChild(option);
+          });
         })
         .getDropdownData();
+      function submitBD01A() {
+        const requiredFields = [
+          { id: "lead-date", label: "Date of Client's Mail/ Lead Generation" },
+          { id: "official-email", label: "Official Email ID" },
+          { id: "customer-company", label: "Customer's Company Legal Name" },
+          { id: "customer-contact", label: "Customer Contact Number" },
+          { id: "customer-email", label: "Customer Email" },
+          {
+            id: "activity-proposed",
+            label: "Type of Activity Proposed",
+          },
+          { id: "st-ut", label: "ST/UT" },
+          { id: "work-type", label: "Type of Work" },
+          { id: "specs", label: "Specifications" },
+          { id: "fin-year", label: "Financial Year" },
+          { id: "pg-company", label: "Perfact group company name" },
+          { id: "customer-class", label: "Customer Classification" },
+          { id: "lead-source", label: "Lead Source" },
+        ];
+        const missingFields = requiredFields.filter((f) => {
+          // Goes through each required field and checks if value is blank
+          const val = document.getElementById(f.id).value.trim();
+          return val === "";
+        });
+        if (missingFields.length > 0) {
+          const fieldNames = missingFields.map((f) => f.label).join(", "); // Creates a string
+          alert("Please fill in: " + fieldNames); // Shows a message and 'return' stops the function before submission
+          return;
+        }
+        const payload = {
+          leadDate: document.getElementById("lead-date").value,
+          formFillerFirstName: document.getElementById("form-filler-first-name")
+            .value,
+          formFillerLastName: document.getElementById("form-filler-last-name")
+            .value,
+          officialEmail: document.getElementById("official-email").value,
+          customerCompany: document.getElementById("customer-company").value,
+          customerFirstName: document.getElementById("customer-first-name")
+            .value,
+          customerLastName: document.getElementById("customer-last-name").value,
+          customerContact: document.getElementById("customer-contact").value,
+          customerEmail: document.getElementById("customer-email").value,
+          isRepeatCustomer: document.querySelector(
+            'input[name="repeat"]:checked',
+          ).value,
+          activityProposed: document.getElementById("activity-proposed").value,
+          village: document.getElementById("village").value,
+          taluka: document.getElementById("taluka").value,
+          district: document.getElementById("district").value,
+          state: document.getElementById("state").value,
+          postalCode: document.getElementById("postal-code").value,
+          country: document.getElementById("country").value,
+          stUt: document.getElementById("st-ut").value,
+          workType: document.getElementById("work-type").value,
+          sector: document.getElementById("sector").value,
+          specs: document.getElementById("specs").value,
+          finYear: document.getElementById("fin-year").value,
+          pgCompany: document.getElementById("pg-company").value,
+          customerClass: document.getElementById("customer-class").value,
+          leadSource: document.getElementById("lead-source").value,
+          rfq: document.getElementById("rfq").files[0], // Assuming single file upload
+          remarks: document.getElementById("remarks").value,
+        };
+      }
+      google.script.run
+        .withSuccessHandler(function (res) {
+          document.getElementById("status").innerText =
+            "✅ Submitted! PCODE: " + res.pcode;
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById("status").innerText =
+            "❌ Error: " + err.message;
+        })
+        .handleBD01Asubmit(payload);
     </script>
   </body>
 </html>
