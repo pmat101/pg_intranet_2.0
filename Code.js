@@ -36,6 +36,7 @@ function genProposalIDnPCODE(pgCompany, stateCode, typeOfWork, sector, specs) {
   return { proposalID, pcode };
 }
 
+/*
 function handleBD01Asubmit(payload) {
   try {
     logger.log("Received payload: " + JSON.stringify(payload));
@@ -83,3 +84,4 @@ function handleBD01Asubmit(payload) {
     throw new Error("BD01A submission failed: " + err.message);
   }
 }
+*/

@@ -6,26 +6,19 @@
 
 3.  Add `getDB()` helper in **Code.gs** to get sheet as object
 
-4.  Add `getNextProjectSerial()` and `genProposalIDnPCODE ()` in **Code.gs** to get serial number, generatae Proposal ID and PCODE
-
-5.  Create **bd01a.html** with styles using **sharedStyles.html** and dropdowns using **config.gs**
-
-6.  Collect all form data in payLoad variable and send to server
-
----
-
 4.  Add `doGet()` routing in **webRoutes.gs** so that URL parameters load the right HTML page
 
-5.  Create shared StyleSheet **sharedStyles.html** and follow the HTML template (below) accordingly
+5.  Create a simple landing page **index.html**
 
-6.  Create a simple landing page **index.html**
+6.  Create shared StyleSheet **sharedStyles.html** and follow the HTML template (below) accordingly
 
-7.  Add server endpoints `getDropdownData()` in **config.gs**. Add client snippet to populate `select` field
+7.  Add server endpoint `getDropdownData()` in **config.gs**.
 
-8.  Add field template to **sharedComponents.html**
-9.  Add `renderField()` to **sharedComponents.html**, it gives input DOM nodes using template for further wiring on the frontend
-10. Create a `<select>` using `renderField()` inside a form file and populate it from the server `getDropdownData()` endpoint
-11.
+8.  Create **bd01a.html** with styles using **sharedStyles.html** and dropdowns using **config.gs**. Add client snippets in form files to populate `select` fields
+
+9.  Collect all form data in payLoad variable and send to server
+
+10. Add `getNextProjectSerial()` and `genProposalIDnPCODE ()` in **Code.gs** to get serial number, generatae Proposal ID and PCODE
 
 ---
 
