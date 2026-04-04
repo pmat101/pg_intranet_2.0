@@ -5,6 +5,15 @@ function getDB() {
   return ss; // 👈 Return the spreadsheet so any other function can call getDB() to access it
 }
 
+function doGet(e) {
+  const page =
+    e && e.parameter && e.parameter.page ? e.parameter.page : "index"; // Reads ?page= from the URL (SAFETY: allow only known pages)
+  return HtmlService.createTemplateFromFile(page) // Returns the HTML file named page
+    .evaluate()
+    .setTitle("PG Intranet")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // Lets us embed the page inside Google Sites iframe
+}
+
 function getNextProjectSerial() {
   const db = getDB();
   const sheet = db.getSheetByName("sequences");
@@ -36,52 +45,75 @@ function genProposalIDnPCODE(pgCompany, stateCode, typeOfWork, sector, specs) {
   return { proposalID, pcode };
 }
 
-/*
-function handleBD01Asubmit(payload) {
-  try {
-    logger.log("Received payload: " + JSON.stringify(payload));
-    const { pgCompany, stateCode, typeOfWork, sector, specs } = payload;
-    const { pcode } = genProposalIDnPCODE(
-      pgCompany,
-      stateCode,
-      typeOfWork,
-      sector,
-      specs,
-    );
-    const db = getDB();
-    const sheet = db.getSheetByName("bd01a");
-    const row = [
-      new Date(),
-      pcode,
-      pgCompany,
-      stateCode,
-      typeOfWork,
-      sector,
-      specs,
-    ];
-    sheet.appendRow(row);
-    const subSheet = db.getSheetByName("submissions");
-    const subID = "SUB_" + Utilities.getUuid(); // 👈 Gives us a globally unique ID
-    const snapshot = JSON.stringify(payload);
-    const subRow = [
-      subID,
-      "BD01A", // 👈 Form code — we'll use this in registers
-      pcode,
-      sessionStorage.getActiveUser().getEmail(), // 👈 Captures the email of the user submitting the form
-      new Date(),
-      "submitted", // 👈 Status (later we can log drafts, rejected, etc.)
-      snapshot, // 👈 Stores the entire payload frozen as a string)
-    ];
-    subSheet.appendRow(subRow);
-
-    const subject = `New BD01A Submission: ${pcode}`;
-    const body = `A new BD01A form has been submitted with the following details:\n\nProposal Code: ${pcode}\nCompany: ${pgCompany}\nState: ${stateCode}\nType of Work: ${typeOfWork}\nSector: ${sector}\nSpecs: ${specs}\n\nPlease review the submission in the spreadsheet.`;
-    const recipients = "pranav.mathur@perfact.in";
-    GmailApp.sendEmail(recipients, subject, body);
-
-    return { pcode };
-  } catch (err) {
-    throw new Error("BD01A submission failed: " + err.message);
-  }
+function submitForm(formCode, payload) {
+  const db = getDB();
+  const sheet = db.getSheetByName("bd01a");
+  const ids = genProposalIDnPCODE(payload);
+  const proposalID = ids.proposalID;
+  const pcode = ids.pcode;
+  const row = [
+    new Date(),
+    proposalID,
+    pcode,
+    payload.leadDate,
+    payload.formFillerFirstName,
+    payload.formFillerLastName,
+    payload.officialEmail,
+    payload.customerCompany,
+    payload.customerFirstName,
+    payload.customerLastName,
+    payload.customerContact,
+    payload.customerEmail,
+    payload.isRepeatCustomer,
+    payload.activityProposed,
+    payload.village,
+    payload.taluka,
+    payload.district,
+    payload.state,
+    payload.postalCode,
+    payload.country,
+    payload.stUt,
+    payload.workType,
+    payload.sector,
+    payload.specs,
+    payload.finYear,
+    payload.pgCompany,
+    payload.customerClass,
+    payload.leadSource,
+    payload.rfq,
+    payload.remarks,
+  ]; // AppScript inserts rows using arrays. Each item becomes a column
+  sheet.appendRow(row); // Adds the row to the bottom of the sheet
+  sendFormEmail(formCode, payload);
+  return {
+    status: "success",
+  };
 }
-*/
+
+function getTeamActiveProjects(teamName) {
+  const db = SpreadsheetApp.openById(
+    "17K8tBcEUhaAeoM0bVZxxxMrS1q0gg-4-m64XQanpI6s",
+  );
+  const sheet = db.getSheetByName("Active - With Timelines");
+  if (!sheet) throw new Error("Missing sheet: Active - With Timelines");
+  const data = sheet.getDataRange().getValues();
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const pcode = row[1]; // column B
+    const projectName = row[2]; // column C
+    const team = row[6]; // column G
+    if (
+      teamName &&
+      String(team).trim() === String(teamName).trim() &&
+      pcode &&
+      projectName
+    ) {
+      rows.push({
+        pcode: pcode,
+        project_name: projectName,
+      });
+    }
+  }
+  return rows;
+}

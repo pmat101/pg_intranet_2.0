@@ -597,6 +597,22 @@ function getDropdownData() {
       "PY",
     ],
     pgCompany: ["PE", "PS", "PR", "PW"],
+    tfNames: Array.from(
+      { length: 27 },
+      (_, i) => "TF" + String(i + 1).padStart(2, "0"),
+    ),
+    designations: ["AH", "FE", "BE", "TA", "Intern"],
+    bottlenecks: [
+      "None",
+      "CCR",
+      "FAE Report",
+      "Baseline Data",
+      "Test Reports",
+      "Drawings",
+      "Maps",
+      "Others",
+    ],
+    statuses: ["Complete", "In progress", "Blocked"],
   };
   cache.put("dropdown_data_v1", JSON.stringify(data), 300); // cache 5 minutes
   return data;

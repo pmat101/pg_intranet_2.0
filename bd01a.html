@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="sharedStyles.css" />
   </head>
   <body>
-    <div class="form-wrapper" onload="populateDropdowns">
+    <div class="form-wrapper" onload="populateDropdowns()">
       <div class="form-title">BD-01(A)</div>
       <div class="form-subtitle">
         To be filled by BD Team before offer is sent
@@ -226,7 +226,7 @@
           <textarea id="remarks"></textarea>
         </div>
       </div>
-      <button class="btn-primary" onclick="submitBD01A()">Submit</button>
+      <button class="btn-primary" onclick="submit()">Submit</button>
     </div>
     <script>
       function populateDropdowns() {
@@ -271,7 +271,7 @@
           })
           .getDropdownData();
       }
-      function submitBD01A() {
+      function submit() {
         const payload = {
           leadDate: document.getElementById("lead-date").value,
           formFillerFirstName: document.getElementById("form-filler-first-name")
@@ -306,6 +306,19 @@
           rfq: document.getElementById("rfq").files[0], // Assuming single file upload
           remarks: document.getElementById("remarks").value,
         };
+        google.script.run
+          .withSuccessHandler(function (res) {
+            alert(
+              "Proposal Created\n\n" +
+                "Proposal ID: " +
+                res.proposalID +
+                "\n" +
+                "PCODE: " +
+                res.pcode,
+            );
+          })
+          .submitForm("bd01a", payload);
+        sendFormEmail("BD-01(A)", payload);
       }
     </script>
   </body>

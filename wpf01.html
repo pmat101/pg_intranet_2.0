@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WPF01</title>
+    <?!= HtmlService.createHtmlOutputFromFile('shared-styles').getContent(); ?>
+  </head>
+  <body>
+    <div class="form-wrapper">
+      <div class="form-title">WPF01</div>
+      <div class="form-subtitle">Weekly performance form - EIA</div>
+      <div class="form-section">
+        <div class="form-group">
+          <label class="form-label" for="start-date">
+            Week Start Date <span class="required">*</span></label
+          >
+          <input type="date" id="start-date" required />
+          <div class="helper-text">dd-mm-yyyy</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="end-date">
+            Week End Date <span class="required">*</span></label
+          >
+          <input type="date" id="end-date" required />
+          <div class="helper-text">dd-mm-yyyy</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="team">
+            Team Name <span class="required">*</span></label
+          >
+          <select id="team" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            TFs filled this week <span class="required">*</span></label
+          >
+          <div class="form-row">
+            <div class="form-col-choice">
+              <input type="radio" id="tf-yes" name="tf-filled" value="yes" />
+              <label for="tf-yes">YES</label>
+            </div>
+            <div class="form-col-choice">
+              <input type="radio" id="tf-no" name="tf-filled" value="no" />
+              <label for="tf-no">NO</label>
+            </div>
+          </div>
+        </div>
+        <div id="tf-subform-container" style="display: none; margin-top: 15px">
+          <div class="form-section">
+            <div class="section-heading">Number of TFs Filled:</div>
+            <div id="tf-rows"></div>
+            <button type="button" id="add-tf-row" class="btn-secondary">
+              + Add TF
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"
+            >Milestone achieved this week <span class="required">*</span></label
+          >
+          <div class="form-row">
+            <div class="form-col-choice">
+              <input type="radio" id="ms-yes" name="ms-filled" value="yes" />
+              <label for="ms-yes">YES</label>
+            </div>
+            <div class="form-col-choice">
+              <input type="radio" id="ms-no" name="ms-filled" value="no" />
+              <label for="ms-no">NO</label>
+            </div>
+          </div>
+        </div>
+
+        <div
+          id="milestone-subform-container"
+          style="display: none; margin-top: 15px"
+        >
+          <div class="form-section">
+            <div class="section-heading">Details of Milestone achieved</div>
+            <div id="milestone-rows"></div>
+            <button type="button" id="add-milestone-row" class="btn-secondary">
+              + Add Milestone
+            </button>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="section-heading">Weekly Team Work Info</div>
+          <div id="team-info-rows"></div>
+          <button type="button" id="add-team-info-row" class="btn-secondary">
+            + Add Team Member
+          </button>
+        </div>
+        <div class="form-section">
+          <div class="section-heading">Weekly Team Work Details</div>
+          <div id="work-rows"></div>
+          <button type="button" id="add-work-row" class="btn-secondary">
+            + Add Work Item
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="active-projects">
+            Number of Active Projects <span class="required">*</span>
+          </label>
+          <input type="number" id="active-projects" min="0" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="total-working-hours"
+            >Total working hours</label
+          >
+          <input type="number" id="total-working-hours" readonly />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="plan">Targets planned this week</label>
+          <textarea id="plan"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="achieve"
+            >Targets achieved this week</label
+          >
+          <textarea id="achieve"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="highlight">Highlights</label>
+          <textarea id="highlight"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="low"
+            >Low Points/ Complaints Received</label
+          >
+          <textarea id="low"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="challenge">Challenges Faced</label>
+          <textarea id="challenge"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ibottle"
+            >Internal Bottlenecks<span class="required">*</span></label
+          >
+          <select id="ibottle" required>
+            <option value="ccr">CCR</option>
+            <option value="faeReport">FAE Report</option>
+            <option value="baseline">Baseline Data</option>
+            <option value="test">Test Reports</option>
+            <option value="drawings">Drawings</option>
+            <option value="maps">Maps</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ebottle"
+            >External Bottlenecks<span class="required">*</span></label
+          >
+          <!-- Client didn't provide land papers
+Client didn't provide signature on Cover Letter
+Yet to receive user ID from NIC
+IT issue in MoEFCC
+Yet to receive Certified Compliance report from Regional office
+others
+None
+ -->
+          <select id="ebottle" required>
+            <option value="ccr">CCR</option>
+            <option value="faeReport">FAE Report</option>
+            <option value="baseline">Baseline Data</option>
+            <option value="test">Test Reports</option>
+            <option value="drawings">Drawings</option>
+            <option value="maps">Maps</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="nextWeek"
+            >Projected targets for next week</label
+          >
+          <textarea id="nextWeek"></textarea>
+        </div>
+      </div>
+      <button class="btn-primary" type="button" onclick="submitWPF01()">
+        Submit
+      </button>
+    </div>
+    <script>
+      const HOURS_PER_DAY = 8;
+      let WPF_DROPDOWNS = {};
+      let WPF_ACTIVE_PROJECTS = [];
+
+      window.addEventListener("DOMContentLoaded", function () {
+        populateDropdowns();
+        bindWPFEvents();
+      });
+
+      function populateDropdowns() {
+        google.script.run
+          .withSuccessHandler(function (data) {
+            WPF_DROPDOWNS = data || {};
+
+            fillSelect(
+              document.getElementById("team"),
+              WPF_DROPDOWNS.team,
+              "Select team",
+            );
+
+            fillSelect(
+              document.getElementById("ibottle"),
+              WPF_DROPDOWNS.bottlenecks,
+              "Select",
+            );
+
+            fillSelect(
+              document.getElementById("ebottle"),
+              WPF_DROPDOWNS.bottlenecks,
+              "Select",
+            );
+
+            fillSelect(
+              document.getElementById("team"),
+              WPF_DROPDOWNS.team,
+              "Select team",
+            );
+          })
+          .getDropdownData();
+      }
+
+      function fillSelect(select, items, placeholder, selectedValue) {
+        if (!select) return;
+
+        const keep = selectedValue !== undefined ? selectedValue : select.value;
+        select.innerHTML = "";
+
+        const first = document.createElement("option");
+        first.value = "";
+        first.textContent = placeholder || "Select";
+        select.appendChild(first);
+
+        (items || []).forEach(function (item) {
+          const option = document.createElement("option");
+
+          if (typeof item === "string") {
+            option.value = item;
+            option.textContent = item;
+          } else {
+            option.value = item.value;
+            option.textContent = item.label || item.value;
+
+            if (item.data && typeof item.data === "object") {
+              Object.keys(item.data).forEach(function (k) {
+                option.dataset[k] = String(item.data[k]);
+              });
+            }
+          }
+
+          select.appendChild(option);
+        });
+
+        if (
+          keep &&
+          Array.from(select.options).some(function (o) {
+            return o.value === keep;
+          })
+        ) {
+          select.value = keep;
+        }
+      }
+
+      function makeKey(prefix) {
+        return (
+          prefix +
+          "_" +
+          Date.now().toString(36) +
+          "_" +
+          Math.random().toString(36).slice(2, 8)
+        );
+      }
+
+      function bindWPFEvents() {
+        document.getElementById("team").addEventListener("change", function () {
+          loadActiveProjectsForTeam(this.value);
+        });
+
+        document
+          .querySelectorAll('input[name="tf-filled"]')
+          .forEach(function (radio) {
+            radio.addEventListener("change", function () {
+              const container = document.getElementById("tf-subform-container");
+              const rowsContainer = document.getElementById("tf-rows");
+
+              if (this.value === "yes") {
+                container.style.display = "block";
+                if (rowsContainer.children.length === 0) {
+                  rowsContainer.appendChild(createTFRow());
+                }
+              } else {
+                container.style.display = "none";
+                rowsContainer.innerHTML = "";
+              }
+            });
+          });
+
+        document
+          .querySelectorAll('input[name="ms-filled"]')
+          .forEach(function (radio) {
+            radio.addEventListener("change", function () {
+              const container = document.getElementById(
+                "milestone-subform-container",
+              );
+              const rowsContainer = document.getElementById("milestone-rows");
+
+              if (this.value === "yes") {
+                container.style.display = "block";
+                if (rowsContainer.children.length === 0) {
+                  rowsContainer.appendChild(createMilestoneRow());
+                }
+              } else {
+                container.style.display = "none";
+                rowsContainer.innerHTML = "";
+              }
+            });
+          });
+
+        document
+          .getElementById("add-tf-row")
+          .addEventListener("click", function () {
+            document.getElementById("tf-rows").appendChild(createTFRow());
+          });
+
+        document
+          .getElementById("add-milestone-row")
+          .addEventListener("click", function () {
+            document
+              .getElementById("milestone-rows")
+              .appendChild(createMilestoneRow());
+          });
+
+        document
+          .getElementById("add-team-info-row")
+          .addEventListener("click", function () {
+            document
+              .getElementById("team-info-rows")
+              .appendChild(createTeamInfoRow());
+            syncWorkRows();
+            updateTotalWorkingHours();
+          });
+
+        document
+          .getElementById("add-work-row")
+          .addEventListener("click", function () {
+            document.getElementById("work-rows").appendChild(createWorkRow());
+            syncWorkRows();
+          });
+
+        document
+          .getElementById("team-info-rows")
+          .addEventListener("input", function () {
+            syncWorkRows();
+            updateTotalWorkingHours();
+          });
+
+        document
+          .getElementById("team-info-rows")
+          .addEventListener("change", function () {
+            syncWorkRows();
+            updateTotalWorkingHours();
+          });
+
+        document
+          .getElementById("work-rows")
+          .addEventListener("input", updateTotalWorkingHours);
+        document
+          .getElementById("work-rows")
+          .addEventListener("change", updateTotalWorkingHours);
+
+        document.getElementById("add-team-info-row")?.click();
+        document.getElementById("add-work-row")?.click();
+      }
+
+      function loadActiveProjectsForTeam(teamName) {
+        const activeProjectsField = document.getElementById("active-projects");
+
+        if (!teamName) {
+          WPF_ACTIVE_PROJECTS = [];
+          if (activeProjectsField) activeProjectsField.value = 0;
+          syncWorkRows();
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(function (rows) {
+            WPF_ACTIVE_PROJECTS = rows || [];
+            if (activeProjectsField)
+              activeProjectsField.value = WPF_ACTIVE_PROJECTS.length;
+            syncWorkRows();
+          })
+          .withFailureHandler(function (err) {
+            alert("Could not load active projects: " + err.message);
+          })
+          .getTeamActiveProjects(teamName);
+      }
+
+      function createTFRow() {
+        const row = document.createElement("div");
+        row.className = "tf-row";
+        row.innerHTML = `
+      <div class="form-row">
+        <div class="form-col">
+          <select class="tf-name"></select>
+        </div>
+        <div class="form-col">
+          <input type="range" class="planned-last-week" min="0" max="10" value="0">
+        </div>
+        <div class="form-col">
+          <input type="range" class="achieving-this-week" min="0" max="10" value="0">
+        </div>
+        <div class="form-col">
+          <input type="range" class="plan-for-next-week" min="0" max="10" value="0">
+        </div>
+        <div style="width:48px; display:flex; align-items:center;">
+          <button type="button" class="btn-secondary remove-row">✕</button>
+        </div>
+      </div>
+    `;
+
+        fillSelect(
+          row.querySelector(".tf-name"),
+          WPF_DROPDOWNS.tfNames,
+          "Select TF",
+        );
+
+        row.querySelector(".remove-row").addEventListener("click", function () {
+          row.remove();
+        });
+
+        return row;
+      }
+
+      function createMilestoneRow() {
+        const row = document.createElement("div");
+        row.className = "milestone-row";
+        row.innerHTML = `
+      <div class="form-row">
+        <div class="form-col">
+          <input type="text" class="milestone-pcode" placeholder="PCODE">
+        </div>
+        <div class="form-col">
+          <input type="text" class="milestone-project_name" placeholder="Project Name">
+        </div>
+        <div class="form-col">
+          <input type="text" class="milestone-achieved" placeholder="Milestone achieved">
+        </div>
+        <div class="form-col">
+          <input type="text" class="milestone-notes" placeholder="Please specify">
+        </div>
+        <div style="width:48px; display:flex; align-items:center;">
+          <button type="button" class="btn-secondary remove-row">✕</button>
+        </div>
+      </div>
+    `;
+
+        row.querySelector(".remove-row").addEventListener("click", function () {
+          row.remove();
+        });
+
+        return row;
+      }
+
+      function createTeamInfoRow() {
+        const row = document.createElement("div");
+        row.className = "team-info-row";
+        row.innerHTML = `
+      <input type="hidden" class="member-key" value="${makeKey("MEM")}">
+      <div class="form-row">
+        <div class="form-col">
+          <input type="text" class="name" placeholder="Name">
+        </div>
+        <div class="form-col">
+          <select class="designation"></select>
+        </div>
+        <div class="form-col">
+          <input type="number" class="working_days" min="0" max="7" step="0.5" placeholder="Working days">
+        </div>
+        <div class="form-col">
+          <input type="number" class="site_visit_days" min="0" max="7" step="0.5" placeholder="Site visit days">
+        </div>
+        <div class="form-col">
+          <textarea class="remarks" placeholder="Remarks"></textarea>
+        </div>
+        <div style="width:48px; display:flex; align-items:center;">
+          <button type="button" class="btn-secondary remove-row">✕</button>
+        </div>
+      </div>
+    `;
+
+        fillSelect(
+          row.querySelector(".designation"),
+          WPF_DROPDOWNS.designations,
+          "Select",
+        );
+
+        row.querySelector(".remove-row").addEventListener("click", function () {
+          row.remove();
+          syncWorkRows();
+          updateTotalWorkingHours();
+        });
+
+        return row;
+      }
+
+      function createWorkRow() {
+        const row = document.createElement("div");
+        row.className = "work-row";
+        row.innerHTML = `
+      <div class="form-row">
+        <div class="form-col">
+          <select class="name"></select>
+        </div>
+        <div class="form-col">
+          <select class="project_name"></select>
+        </div>
+        <div class="form-col">
+          <input type="text" class="pcode" readonly>
+        </div>
+        <div class="form-col">
+          <textarea class="task_description" placeholder="Task Description"></textarea>
+        </div>
+        <div class="form-col">
+          <input type="number" class="time_spent" min="0" step="0.5" placeholder="Time spent">
+        </div>
+        <div class="form-col">
+          <select class="status"></select>
+        </div>
+        <div class="form-col">
+          <textarea class="remarks" placeholder="Remarks"></textarea>
+        </div>
+        <div style="width:48px; display:flex; align-items:center;">
+          <button type="button" class="btn-secondary remove-row">✕</button>
+        </div>
+      </div>
+    `;
+
+        row.querySelector(".remove-row").addEventListener("click", function () {
+          row.remove();
+          updateTotalWorkingHours();
+        });
+
+        row
+          .querySelector(".project_name")
+          .addEventListener("change", function () {
+            const selected = this.selectedOptions[0];
+            row.querySelector(".pcode").value = selected?.value || "";
+            updateTotalWorkingHours();
+          });
+
+        row
+          .querySelector(".time_spent")
+          .addEventListener("input", updateTotalWorkingHours);
+
+        syncWorkRowOptions(row);
+        return row;
+      }
+
+      function syncWorkRows() {
+        const rows = Array.from(
+          document.querySelectorAll("#work-rows .work-row"),
+        );
+        const members = collectTeamInfoRows().filter(function (m) {
+          return m.name;
+        });
+
+        if (!rows.length && (members.length || WPF_ACTIVE_PROJECTS.length)) {
+          document.getElementById("work-rows").appendChild(createWorkRow());
+        }
+
+        Array.from(document.querySelectorAll("#work-rows .work-row")).forEach(
+          function (row) {
+            syncWorkRowOptions(row);
+          },
+        );
+
+        updateTotalWorkingHours();
+      }
+
+      function syncWorkRowOptions(row) {
+        const members = collectTeamInfoRows().filter(function (m) {
+          return m.name;
+        });
+
+        const memberSelect = row.querySelector(".name");
+        const projectSelect = row.querySelector(".project_name");
+
+        const currentMember = memberSelect ? memberSelect.value : "";
+        const currentProject = projectSelect ? projectSelect.value : "";
+
+        fillSelect(
+          memberSelect,
+          members.map(function (m) {
+            return {
+              value: m.member_key,
+              label: m.name + (m.designation ? " (" + m.designation + ")" : ""),
+              data: {
+                memberName: m.name,
+                designation: m.designation || "",
+              },
+            };
+          }),
+          "Select member",
+          currentMember,
+        );
+
+        fillSelect(
+          projectSelect,
+          WPF_ACTIVE_PROJECTS.map(function (p) {
+            return {
+              value: p.pcode,
+              label: p.project_name + " | " + p.pcode,
+              data: {
+                projectName: p.project_name,
+                pcode: p.pcode,
+              },
+            };
+          }),
+          "Select project",
+          currentProject,
+        );
+
+        const selectedProject = projectSelect?.selectedOptions?.[0];
+        row.querySelector(".pcode").value = selectedProject?.value || "";
+
+        if (!projectSelect.dataset.bound) {
+          projectSelect.dataset.bound = "1";
+          projectSelect.addEventListener("change", function () {
+            const opt = this.selectedOptions[0];
+            row.querySelector(".pcode").value = opt?.value || "";
+          });
+        }
+      }
+
+      function collectTeamInfoRows() {
+        return Array.from(
+          document.querySelectorAll("#team-info-rows .team-info-row"),
+        )
+          .map(function (row) {
+            return {
+              member_key: row.querySelector(".member-key")?.value || "",
+              name: row.querySelector(".name")?.value || "",
+              designation: row.querySelector(".designation")?.value || "",
+              working_days: row.querySelector(".working_days")?.value || "",
+              site_visit_days:
+                row.querySelector(".site_visit_days")?.value || "",
+              remarks: row.querySelector(".remarks")?.value || "",
+            };
+          })
+          .filter(function (r) {
+            return (
+              r.name ||
+              r.designation ||
+              r.working_days ||
+              r.site_visit_days ||
+              r.remarks
+            );
+          });
+      }
+
+      function collectTFRows() {
+        return Array.from(document.querySelectorAll("#tf-rows .tf-row"))
+          .map(function (row) {
+            return {
+              tf_name: row.querySelector(".tf-name")?.value || "",
+              planned_last_week:
+                row.querySelector(".planned-last-week")?.value || "",
+              achieving_this_week:
+                row.querySelector(".achieving-this-week")?.value || "",
+              plan_for_next_week:
+                row.querySelector(".plan-for-next-week")?.value || "",
+            };
+          })
+          .filter(function (r) {
+            return (
+              r.tf_name ||
+              r.planned_last_week ||
+              r.achieving_this_week ||
+              r.plan_for_next_week
+            );
+          });
+      }
+
+      function collectMilestoneRows() {
+        return Array.from(
+          document.querySelectorAll("#milestone-rows .milestone-row"),
+        )
+          .map(function (row) {
+            return {
+              pcode: row.querySelector(".milestone-pcode")?.value || "",
+              project_name:
+                row.querySelector(".milestone-project_name")?.value || "",
+              milestone_achieved:
+                row.querySelector(".milestone-achieved")?.value || "",
+              special_notes: row.querySelector(".milestone-notes")?.value || "",
+            };
+          })
+          .filter(function (r) {
+            return (
+              r.pcode ||
+              r.project_name ||
+              r.milestone_achieved ||
+              r.special_notes
+            );
+          });
+      }
+
+      function collectWorkRows() {
+        return Array.from(document.querySelectorAll("#work-rows .work-row"))
+          .map(function (row) {
+            const memberSelect = row.querySelector(".name");
+            const projectSelect = row.querySelector(".project_name");
+
+            const memberOpt = memberSelect?.selectedOptions?.[0];
+            const projectOpt = projectSelect?.selectedOptions?.[0];
+
+            return {
+              member_key: memberSelect?.value || "",
+              name:
+                memberOpt?.dataset.memberName || memberOpt?.textContent || "",
+              designation: memberOpt?.dataset.designation || "",
+              project_name:
+                projectOpt?.dataset.projectName ||
+                projectOpt?.textContent ||
+                "",
+              pcode: row.querySelector(".pcode")?.value || "",
+              task_description:
+                row.querySelector(".task_description")?.value || "",
+              time_spent: row.querySelector(".time_spent")?.value || "",
+              status: row.querySelector(".status")?.value || "",
+              remarks: row.querySelector(".remarks")?.value || "",
+            };
+          })
+          .filter(function (r) {
+            return (
+              r.name ||
+              r.project_name ||
+              r.pcode ||
+              r.task_description ||
+              r.time_spent ||
+              r.status ||
+              r.remarks
+            );
+          });
+      }
+
+      function updateTotalWorkingHours() {
+        const roster = collectTeamInfoRows();
+        const expected = roster.reduce(function (sum, member) {
+          return sum + (parseFloat(member.working_days) || 0) * HOURS_PER_DAY;
+        }, 0);
+
+        const totalField = document.getElementById("total-working-hours");
+        if (totalField) totalField.value = expected.toFixed(1);
+      }
+
+      function validateRosterHours(payload) {
+        const roster = payload.weekly_team_info || [];
+        const workRows = payload.weekly_team_details || [];
+
+        const expectedByMember = {};
+        roster.forEach(function (m) {
+          if (!m.member_key) return;
+          expectedByMember[m.member_key] =
+            (parseFloat(m.working_days) || 0) * HOURS_PER_DAY;
+        });
+
+        const actualByMember = {};
+        workRows.forEach(function (r) {
+          if (!r.member_key) return;
+          actualByMember[r.member_key] =
+            (actualByMember[r.member_key] || 0) +
+            (parseFloat(r.time_spent) || 0);
+        });
+
+        const errors = [];
+        Object.keys(expectedByMember).forEach(function (key) {
+          const expected = Number(expectedByMember[key].toFixed(2));
+          const actual = Number((actualByMember[key] || 0).toFixed(2));
+
+          if (Math.abs(expected - actual) > 0.01) {
+            const member = roster.find(function (r) {
+              return r.member_key === key;
+            });
+            errors.push(
+              (member?.name || "Member") +
+                ": expected " +
+                expected +
+                " hours, got " +
+                actual +
+                " hours",
+            );
+          }
+        });
+
+        if (errors.length) {
+          throw new Error(
+            "Weekly Team Work Details hours must match roster hours.\n\n" +
+              errors.join("\n"),
+          );
+        }
+      }
+
+      function validateWPF01(payload) {
+        const missing = [];
+        if (!payload.week_start) missing.push("Week Start Date");
+        if (!payload.week_end) missing.push("Week End Date");
+        if (!payload.team_name) missing.push("Team Name");
+        if (!payload.tf_filled) missing.push("TFs filled this week");
+
+        if (
+          !payload.weekly_team_info ||
+          payload.weekly_team_info.length === 0
+        ) {
+          missing.push("Weekly Team Work Info");
+        }
+
+        if (
+          !payload.weekly_team_details ||
+          payload.weekly_team_details.length === 0
+        ) {
+          missing.push("Weekly Team Work Details");
+        }
+
+        if (missing.length) {
+          throw new Error("Please fill: " + missing.join(", "));
+        }
+
+        if (
+          payload.tf_filled === "yes" &&
+          (!payload.tf_details || payload.tf_details.length === 0)
+        ) {
+          throw new Error(
+            "TFs filled this week is YES, so add at least one TF row.",
+          );
+        }
+
+        if (
+          payload.milestone_achieved === "yes" &&
+          (!payload.milestone_details || payload.milestone_details.length === 0)
+        ) {
+          throw new Error(
+            "Milestone achieved this week is YES, so add at least one milestone row.",
+          );
+        }
+
+        validateRosterHours(payload);
+      }
+
+      function submitWPF01() {
+        const payload = {
+          week_start: document.getElementById("start-date").value,
+          week_end: document.getElementById("end-date").value,
+          team_name: document.getElementById("team").value,
+          tf_filled: getCheckedValue("tf-filled"),
+          milestone_achieved: getCheckedValue("ms-filled"),
+
+          number_of_active_projects:
+            document.getElementById("active-projects").value,
+          total_working_hours: document.getElementById("total-working-hours")
+            .value,
+          targets_planned_this_week: document.getElementById("plan").value,
+          targets_achieved_this_week: document.getElementById("achieve").value,
+          highlights: document.getElementById("highlight").value,
+          low_points_complaints: document.getElementById("low").value,
+          challenges_faced: document.getElementById("challenge").value,
+          internal_bottlenecks: document.getElementById("ibottle").value,
+          external_bottlenecks: document.getElementById("ebottle").value,
+          projected_targets_next_week:
+            document.getElementById("nextWeek").value,
+
+          tf_details:
+            getCheckedValue("tf-filled") === "yes" ? collectTFRows() : [],
+          milestone_details:
+            getCheckedValue("ms-filled") === "yes"
+              ? collectMilestoneRows()
+              : [],
+          weekly_team_info: collectTeamInfoRows(),
+          weekly_team_details: collectWorkRows(),
+        };
+
+        try {
+          validateWPF01(payload);
+        } catch (err) {
+          alert(err.message);
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(function (res) {
+            alert(
+              "WPF01 submitted successfully\n\nSubmission ID: " +
+                res.submission_id,
+            );
+          })
+          .withFailureHandler(function (err) {
+            alert("Submission failed: " + err.message);
+          })
+          .submitWPF01(payload);
+      }
+
+      function getCheckedValue(name) {
+        const checked = document.querySelector(`input[name="${name}"]:checked`);
+        return checked ? checked.value : "";
+      }
+    </script>
+  </body>
+</html>

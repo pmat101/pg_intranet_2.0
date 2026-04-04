@@ -16,9 +16,9 @@
 
 8.  Create **bd01a.html** with styles using **sharedStyles.html** and dropdowns using **config.gs**. Add client snippets in form files to populate `select` fields
 
-9.  Collect all form data in payLoad variable and send to server
+9.  Collect all form data in payLoad variable and send to server using `submitForm()` function
 
-10. Add `getNextProjectSerial()` and `genProposalIDnPCODE ()` in **Code.gs** to get serial number, generatae Proposal ID and PCODE
+10. Add `getNextProjectSerial()` and `genProposalIDnPCODE ()` in **Code.gs** to get serial number, generate Proposal ID and PCODE
 
 ---
 
