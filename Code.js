@@ -8,7 +8,9 @@ function getDB() {
 function doGet(e) {
   const page =
     e && e.parameter && e.parameter.page ? e.parameter.page : "index"; // Reads ?page= from the URL (SAFETY: allow only known pages)
-  return HtmlService.createTemplateFromFile(page) // Returns the HTML file named page
+  const template = HtmlService.createTemplateFromFile(page);
+  template.scriptURL = ScriptApp.getService().getUrl();
+  return template
     .evaluate()
     .setTitle("PG Intranet")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); // Lets us embed the page inside Google Sites iframe
@@ -98,11 +100,14 @@ function getTeamActiveProjects(teamName) {
   if (!sheet) throw new Error("Missing sheet: Active - With Timelines");
   const data = sheet.getDataRange().getValues();
   const rows = [];
+
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
+
     const pcode = row[1]; // column B
     const projectName = row[2]; // column C
     const team = row[6]; // column G
+
     if (
       teamName &&
       String(team).trim() === String(teamName).trim() &&
@@ -115,5 +120,6 @@ function getTeamActiveProjects(teamName) {
       });
     }
   }
+
   return rows;
 }

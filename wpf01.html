@@ -93,16 +93,17 @@
         </div>
         <div class="form-section">
           <div class="section-heading">Weekly Team Work Details</div>
-          <div id="work-rows"></div>
-          <button type="button" id="add-work-row" class="btn-secondary">
-            + Add Work Item
-          </button>
+          <div id="work-rows" class="work-matrix-wrap"></div>
+          <div class="helper-text">
+            Select a team, fill Weekly Team Work Info, and the project matrix
+            will load automatically.
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label" for="active-projects">
             Number of Active Projects <span class="required">*</span>
           </label>
-          <input type="number" id="active-projects" min="0" required />
+          <input type="number" id="active-projects" min="0" required readonly />
         </div>
 
         <div class="form-group">
@@ -140,34 +141,53 @@
             >Internal Bottlenecks<span class="required">*</span></label
           >
           <select id="ibottle" required>
+            <option value="none">None</option>
             <option value="ccr">CCR</option>
             <option value="faeReport">FAE Report</option>
             <option value="baseline">Baseline Data</option>
             <option value="test">Test Reports</option>
             <option value="drawings">Drawings</option>
             <option value="maps">Maps</option>
+            <option value="other">Other</option>
           </select>
+          <div
+            id="ibottle-other-wrap"
+            class="form-group"
+            style="display: none; margin-top: 10px"
+          >
+            <label class="form-label" for="ibottle-other">Please specify</label>
+            <input type="text" id="ibottle-other" />
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label" for="ebottle"
             >External Bottlenecks<span class="required">*</span></label
           >
-          <!-- Client didn't provide land papers
-Client didn't provide signature on Cover Letter
-Yet to receive user ID from NIC
-IT issue in MoEFCC
-Yet to receive Certified Compliance report from Regional office
-others
-None
- -->
           <select id="ebottle" required>
-            <option value="ccr">CCR</option>
-            <option value="faeReport">FAE Report</option>
-            <option value="baseline">Baseline Data</option>
-            <option value="test">Test Reports</option>
-            <option value="drawings">Drawings</option>
-            <option value="maps">Maps</option>
+            <option value="none">None</option>
+            <option value="land_papers_missing">
+              Client didn't provide land papers
+            </option>
+            <option value="cover_letter_signature_missing">
+              Client didn't provide signature on Cover Letter
+            </option>
+            <option value="nic_user_id_pending">
+              Yet to receive user ID from NIC
+            </option>
+            <option value="moefcc_it_issue">IT issue in MoEFCC</option>
+            <option value="ccr_pending">
+              Yet to receive Certified Compliance report from Regional office
+            </option>
+            <option value="other">Other</option>
           </select>
+          <div
+            id="ebottle-other-wrap"
+            class="form-group"
+            style="display: none; margin-top: 10px"
+          >
+            <label class="form-label" for="ebottle-other">Please specify</label>
+            <input type="text" id="ebottle-other" />
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label" for="nextWeek"
@@ -213,11 +233,8 @@ None
               "Select",
             );
 
-            fillSelect(
-              document.getElementById("team"),
-              WPF_DROPDOWNS.team,
-              "Select team",
-            );
+            refreshDesignationDropdowns();
+            renderWorkMatrix();
           })
           .getDropdownData();
       }
@@ -263,6 +280,47 @@ None
         }
       }
 
+      function toggleOtherBlock(selectId, wrapId, inputId) {
+        const select = document.getElementById(selectId);
+        const wrap = document.getElementById(wrapId);
+        const input = document.getElementById(inputId);
+
+        if (!select || !wrap || !input) return;
+
+        function sync() {
+          const show = /other/i.test(select.value || "");
+          wrap.style.display = show ? "block" : "none";
+          if (!show) input.value = "";
+        }
+
+        select.addEventListener("change", sync);
+        sync();
+      }
+
+      function getSelectValueOrOther(selectId, otherInputId) {
+        const select = document.getElementById(selectId);
+        const other = document.getElementById(otherInputId);
+
+        if (!select) return "";
+        if (/other/i.test(select.value || "")) {
+          return (other?.value || "").trim();
+        }
+        return select.value;
+      }
+
+      function refreshDesignationDropdowns() {
+        document
+          .querySelectorAll("#team-info-rows .designation")
+          .forEach(function (select) {
+            fillSelect(
+              select,
+              WPF_DROPDOWNS.designations,
+              "Select",
+              select.value,
+            );
+          });
+      }
+
       function makeKey(prefix) {
         return (
           prefix +
@@ -273,9 +331,24 @@ None
         );
       }
 
+      function wireRangeDisplay(rangeInput) {
+        const output = rangeInput.parentElement.querySelector(".range-value");
+
+        function sync() {
+          const value = rangeInput.value || "0";
+          if (output) output.textContent = value;
+          rangeInput.title = value + " / 10";
+        }
+
+        rangeInput.addEventListener("input", sync);
+        sync();
+      }
+
       function bindWPFEvents() {
         document.getElementById("team").addEventListener("change", function () {
           loadActiveProjectsForTeam(this.value);
+          toggleOtherBlock("ibottle", "ibottle-other-wrap", "ibottle-other");
+          toggleOtherBlock("ebottle", "ebottle-other-wrap", "ebottle-other");
         });
 
         document
@@ -338,40 +411,40 @@ None
             document
               .getElementById("team-info-rows")
               .appendChild(createTeamInfoRow());
-            syncWorkRows();
+            refreshDesignationDropdowns();
+            renderWorkMatrix();
             updateTotalWorkingHours();
-          });
-
-        document
-          .getElementById("add-work-row")
-          .addEventListener("click", function () {
-            document.getElementById("work-rows").appendChild(createWorkRow());
-            syncWorkRows();
           });
 
         document
           .getElementById("team-info-rows")
           .addEventListener("input", function () {
-            syncWorkRows();
+            refreshDesignationDropdowns();
+            renderWorkMatrix();
             updateTotalWorkingHours();
           });
 
         document
           .getElementById("team-info-rows")
           .addEventListener("change", function () {
-            syncWorkRows();
+            refreshDesignationDropdowns();
+            renderWorkMatrix();
             updateTotalWorkingHours();
           });
 
         document
           .getElementById("work-rows")
-          .addEventListener("input", updateTotalWorkingHours);
+          .addEventListener("input", function () {
+            updateTotalWorkingHours();
+          });
+
         document
           .getElementById("work-rows")
-          .addEventListener("change", updateTotalWorkingHours);
+          .addEventListener("change", function () {
+            updateTotalWorkingHours();
+          });
 
         document.getElementById("add-team-info-row")?.click();
-        document.getElementById("add-work-row")?.click();
       }
 
       function loadActiveProjectsForTeam(teamName) {
@@ -380,7 +453,7 @@ None
         if (!teamName) {
           WPF_ACTIVE_PROJECTS = [];
           if (activeProjectsField) activeProjectsField.value = 0;
-          syncWorkRows();
+          renderWorkMatrix();
           return;
         }
 
@@ -389,7 +462,7 @@ None
             WPF_ACTIVE_PROJECTS = rows || [];
             if (activeProjectsField)
               activeProjectsField.value = WPF_ACTIVE_PROJECTS.length;
-            syncWorkRows();
+            renderWorkMatrix();
           })
           .withFailureHandler(function (err) {
             alert("Could not load active projects: " + err.message);
@@ -401,30 +474,48 @@ None
         const row = document.createElement("div");
         row.className = "tf-row";
         row.innerHTML = `
-      <div class="form-row">
-        <div class="form-col">
-          <select class="tf-name"></select>
-        </div>
-        <div class="form-col">
-          <input type="range" class="planned-last-week" min="0" max="10" value="0">
-        </div>
-        <div class="form-col">
-          <input type="range" class="achieving-this-week" min="0" max="10" value="0">
-        </div>
-        <div class="form-col">
-          <input type="range" class="plan-for-next-week" min="0" max="10" value="0">
-        </div>
-        <div style="width:48px; display:flex; align-items:center;">
-          <button type="button" class="btn-secondary remove-row">✕</button>
-        </div>
-      </div>
-    `;
+          <div class="form-row">
+            <div class="form-col">
+              <select class="tf-name"></select>
+            </div>
+
+            <div class="form-col">
+              <label class="form-label tf-slider-label">Planned last week</label>
+              <div class="range-stack">
+                <input type="range" class="planned-last-week" min="0" max="10" value="0">
+                <span class="range-value">0</span>
+              </div>
+            </div>
+
+            <div class="form-col">
+              <label class="form-label tf-slider-label">Achieving this week</label>
+              <div class="range-stack">
+                <input type="range" class="achieving-this-week" min="0" max="10" value="0">
+                <span class="range-value">0</span>
+              </div>
+            </div>
+
+            <div class="form-col">
+              <label class="form-label tf-slider-label">Plan for next week</label>
+              <div class="range-stack">
+                <input type="range" class="plan-for-next-week" min="0" max="10" value="0">
+                <span class="range-value">0</span>
+              </div>
+            </div>
+
+            <div style="width:48px; display:flex; align-items:center;">
+              <button type="button" class="btn-secondary remove-row">✕</button>
+            </div>
+          </div>
+          `;
 
         fillSelect(
           row.querySelector(".tf-name"),
           WPF_DROPDOWNS.tfNames,
           "Select TF",
         );
+
+        row.querySelectorAll('input[type="range"]').forEach(wireRangeDisplay);
 
         row.querySelector(".remove-row").addEventListener("click", function () {
           row.remove();
@@ -437,28 +528,40 @@ None
         const row = document.createElement("div");
         row.className = "milestone-row";
         row.innerHTML = `
-      <div class="form-row">
-        <div class="form-col">
-          <input type="text" class="milestone-pcode" placeholder="PCODE">
-        </div>
-        <div class="form-col">
-          <input type="text" class="milestone-project_name" placeholder="Project Name">
-        </div>
-        <div class="form-col">
-          <input type="text" class="milestone-achieved" placeholder="Milestone achieved">
-        </div>
-        <div class="form-col">
-          <input type="text" class="milestone-notes" placeholder="Please specify">
-        </div>
-        <div style="width:48px; display:flex; align-items:center;">
-          <button type="button" class="btn-secondary remove-row">✕</button>
-        </div>
-      </div>
-    `;
+          <div class="form-row">
+            <div class="form-col">
+              <select class="milestone-achieved"></select>
+              <div class="milestone-other-wrap" style="display:none; margin-top:8px;">
+                <input type="text" class="milestone-other" placeholder="Please specify">
+              </div>
+            </div>
+            <div class="form-col">
+              <input type="text" class="milestone-pcode" placeholder="PCODE">
+            </div>
+            <div class="form-col">
+              <input type="text" class="milestone-project_name" placeholder="Project Name">
+            </div>
+          </div>
+          `;
 
-        row.querySelector(".remove-row").addEventListener("click", function () {
-          row.remove();
-        });
+        fillSelect(
+          row.querySelector(".milestone-achieved"),
+          WPF_DROPDOWNS.milestones,
+          "Select milestone",
+        );
+
+        const milestoneSelect = row.querySelector(".milestone-achieved");
+        const otherWrap = row.querySelector(".milestone-other-wrap");
+        const otherInput = row.querySelector(".milestone-other");
+
+        function toggleOtherField() {
+          const show = /other/i.test(milestoneSelect.value || "");
+          otherWrap.style.display = show ? "block" : "none";
+          if (!show) otherInput.value = "";
+        }
+
+        milestoneSelect.addEventListener("change", toggleOtherField);
+        toggleOtherField();
 
         return row;
       }
@@ -467,28 +570,28 @@ None
         const row = document.createElement("div");
         row.className = "team-info-row";
         row.innerHTML = `
-      <input type="hidden" class="member-key" value="${makeKey("MEM")}">
-      <div class="form-row">
-        <div class="form-col">
-          <input type="text" class="name" placeholder="Name">
-        </div>
-        <div class="form-col">
-          <select class="designation"></select>
-        </div>
-        <div class="form-col">
-          <input type="number" class="working_days" min="0" max="7" step="0.5" placeholder="Working days">
-        </div>
-        <div class="form-col">
-          <input type="number" class="site_visit_days" min="0" max="7" step="0.5" placeholder="Site visit days">
-        </div>
-        <div class="form-col">
-          <textarea class="remarks" placeholder="Remarks"></textarea>
-        </div>
-        <div style="width:48px; display:flex; align-items:center;">
-          <button type="button" class="btn-secondary remove-row">✕</button>
-        </div>
-      </div>
-    `;
+              <input type="hidden" class="member-key" value="${makeKey("MEM")}">
+              <div class="form-row">
+                <div class="form-col">
+                  <input type="text" class="name" placeholder="Name">
+                </div>
+                <div class="form-col">
+                  <select class="designation"></select>
+                </div>
+                <div class="form-col">
+                  <input type="number" class="working_days" min="0" max="7" step="0.5" placeholder="Working days">
+                </div>
+                <div class="form-col">
+                  <input type="number" class="site_visit_days" min="0" max="7" step="0.5" placeholder="Site visit days">
+                </div>
+                <div class="form-col">
+                  <textarea class="remarks" placeholder="Remarks"></textarea>
+                </div>
+                <div style="width:48px; display:flex; align-items:center;">
+                  <button type="button" class="btn-secondary remove-row">✕</button>
+                </div>
+              </div>
+            `;
 
         fillSelect(
           row.querySelector(".designation"),
@@ -498,140 +601,175 @@ None
 
         row.querySelector(".remove-row").addEventListener("click", function () {
           row.remove();
-          syncWorkRows();
+          renderWorkMatrix();
           updateTotalWorkingHours();
         });
 
         return row;
       }
 
-      function createWorkRow() {
-        const row = document.createElement("div");
-        row.className = "work-row";
-        row.innerHTML = `
-      <div class="form-row">
-        <div class="form-col">
-          <select class="name"></select>
-        </div>
-        <div class="form-col">
-          <select class="project_name"></select>
-        </div>
-        <div class="form-col">
-          <input type="text" class="pcode" readonly>
-        </div>
-        <div class="form-col">
-          <textarea class="task_description" placeholder="Task Description"></textarea>
-        </div>
-        <div class="form-col">
-          <input type="number" class="time_spent" min="0" step="0.5" placeholder="Time spent">
-        </div>
-        <div class="form-col">
-          <select class="status"></select>
-        </div>
-        <div class="form-col">
-          <textarea class="remarks" placeholder="Remarks"></textarea>
-        </div>
-        <div style="width:48px; display:flex; align-items:center;">
-          <button type="button" class="btn-secondary remove-row">✕</button>
-        </div>
-      </div>
-    `;
+      function captureWorkMatrixValues() {
+        const saved = {};
 
-        row.querySelector(".remove-row").addEventListener("click", function () {
-          row.remove();
-          updateTotalWorkingHours();
-        });
+        document
+          .querySelectorAll("#work-rows tbody tr[data-pcode]")
+          .forEach(function (tr) {
+            const pcode = tr.dataset.pcode || "";
+            const taskCells = Array.from(
+              tr.querySelectorAll("textarea.matrix-task"),
+            );
+            const timeCells = Array.from(
+              tr.querySelectorAll("input.matrix-time"),
+            );
 
-        row
-          .querySelector(".project_name")
-          .addEventListener("change", function () {
-            const selected = this.selectedOptions[0];
-            row.querySelector(".pcode").value = selected?.value || "";
-            updateTotalWorkingHours();
+            taskCells.forEach(function (taskEl, index) {
+              const timeEl = timeCells[index];
+              const memberKey = taskEl.dataset.memberKey || "";
+              const key = pcode + "__" + memberKey;
+
+              saved[key] = {
+                task: taskEl.value || "",
+                time: timeEl ? timeEl.value || "0" : "0",
+              };
+            });
           });
 
-        row
-          .querySelector(".time_spent")
-          .addEventListener("input", updateTotalWorkingHours);
-
-        syncWorkRowOptions(row);
-        return row;
+        return saved;
       }
 
-      function syncWorkRows() {
-        const rows = Array.from(
-          document.querySelectorAll("#work-rows .work-row"),
-        );
+      function escapeHtmlClient(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function renderWorkMatrix() {
+        const container = document.getElementById("work-rows");
+        if (!container) return;
+
         const members = collectTeamInfoRows().filter(function (m) {
-          return m.name;
+          return m.name && m.member_key;
         });
 
-        if (!rows.length && (members.length || WPF_ACTIVE_PROJECTS.length)) {
-          document.getElementById("work-rows").appendChild(createWorkRow());
+        const projects = WPF_ACTIVE_PROJECTS || [];
+        const saved = captureWorkMatrixValues();
+
+        if (!document.getElementById("team").value) {
+          container.innerHTML =
+            '<div class="helper-text">Select a team to load active projects.</div>';
+          return;
         }
 
-        Array.from(document.querySelectorAll("#work-rows .work-row")).forEach(
-          function (row) {
-            syncWorkRowOptions(row);
-          },
-        );
+        if (!members.length) {
+          container.innerHTML =
+            '<div class="helper-text">Add team members above to generate the matrix.</div>';
+          return;
+        }
 
-        updateTotalWorkingHours();
-      }
+        if (!projects.length) {
+          container.innerHTML =
+            '<div class="helper-text">No active projects found for this team.</div>';
+          return;
+        }
 
-      function syncWorkRowOptions(row) {
-        const members = collectTeamInfoRows().filter(function (m) {
-          return m.name;
+        let html = '<table class="matrix-table">';
+
+        html += "<thead>";
+        html += "<tr>";
+        html +=
+          '<th style="min-width:180px;" class="col-project">Active Projects</th>';
+        html += '<th style="min-width:140px;" class="col-pcode">PCODE</th>';
+
+        members.forEach(function (m) {
+          html +=
+            '<th class="matrix-member-head col-member">' +
+            escapeHtmlClient(m.name) +
+            (m.designation
+              ? "<br><span class='helper-text'>" +
+                escapeHtmlClient(m.designation) +
+                "</span>"
+              : "") +
+            "</th>";
         });
 
-        const memberSelect = row.querySelector(".name");
-        const projectSelect = row.querySelector(".project_name");
+        html += "</tr>";
+        html += "</thead>";
 
-        const currentMember = memberSelect ? memberSelect.value : "";
-        const currentProject = projectSelect ? projectSelect.value : "";
+        html += "<tbody>";
 
-        fillSelect(
-          memberSelect,
-          members.map(function (m) {
-            return {
-              value: m.member_key,
-              label: m.name + (m.designation ? " (" + m.designation + ")" : ""),
-              data: {
-                memberName: m.name,
-                designation: m.designation || "",
-              },
-            };
-          }),
-          "Select member",
-          currentMember,
-        );
+        projects.forEach(function (project) {
+          const pcode = project.pcode || "";
+          const projectName = project.project_name || "";
 
-        fillSelect(
-          projectSelect,
-          WPF_ACTIVE_PROJECTS.map(function (p) {
-            return {
-              value: p.pcode,
-              label: p.project_name + " | " + p.pcode,
-              data: {
-                projectName: p.project_name,
-                pcode: p.pcode,
-              },
-            };
-          }),
-          "Select project",
-          currentProject,
-        );
+          html +=
+            '<tr data-pcode="' +
+            escapeHtmlClient(pcode) +
+            '" data-project-name="' +
+            escapeHtmlClient(projectName) +
+            '">';
 
-        const selectedProject = projectSelect?.selectedOptions?.[0];
-        row.querySelector(".pcode").value = selectedProject?.value || "";
+          html +=
+            "<td class='col-project'>" +
+            escapeHtmlClient(projectName) +
+            "</td>";
+          html += "<td class='col-pcode'>" + escapeHtmlClient(pcode) + "</td>";
 
-        if (!projectSelect.dataset.bound) {
-          projectSelect.dataset.bound = "1";
-          projectSelect.addEventListener("change", function () {
-            const opt = this.selectedOptions[0];
-            row.querySelector(".pcode").value = opt?.value || "";
+          members.forEach(function (m) {
+            const key = pcode + "__" + m.member_key;
+            const prev = saved[key] || {};
+            html +=
+              '<td class="col-member">' +
+              '<div class="cell-stack">' +
+              '<textarea class="matrix-task" placeholder="Leave blank if no work" ' +
+              'data-member-key="' +
+              escapeHtmlClient(m.member_key) +
+              '" ' +
+              'data-member-name="' +
+              escapeHtmlClient(m.name) +
+              '" ' +
+              'data-designation="' +
+              escapeHtmlClient(m.designation || "") +
+              '" ' +
+              'data-pcode="' +
+              escapeHtmlClient(pcode) +
+              '">' +
+              escapeHtmlClient(prev.task || "") +
+              "</textarea>" +
+              '<input type="number" class="matrix-time" min="0" step="0.5" required ' +
+              'data-member-key="' +
+              escapeHtmlClient(m.member_key) +
+              '" ' +
+              'data-member-name="' +
+              escapeHtmlClient(m.name) +
+              '" ' +
+              'data-designation="' +
+              escapeHtmlClient(m.designation || "") +
+              '" ' +
+              'data-pcode="' +
+              escapeHtmlClient(pcode) +
+              '" ' +
+              'value="' +
+              escapeHtmlClient(prev.time !== undefined ? prev.time : "0") +
+              '">' +
+              "</div></td>";
           });
-        }
+
+          html += "</tr>";
+        });
+
+        html += "</tbody></table>";
+
+        container.innerHTML = html;
+
+        container.querySelectorAll(".matrix-time").forEach(function (input) {
+          input.addEventListener("blur", function () {
+            if (this.value === "") this.value = "0";
+          });
+          input.addEventListener("input", updateTotalWorkingHours);
+        });
       }
 
       function collectTeamInfoRows() {
@@ -688,66 +826,74 @@ None
           document.querySelectorAll("#milestone-rows .milestone-row"),
         )
           .map(function (row) {
+            const milestoneSelect = row.querySelector(".milestone-achieved");
+            const otherInput = row.querySelector(".milestone-other");
+
+            const milestoneValue = /other/i.test(milestoneSelect?.value || "")
+              ? (otherInput?.value || "").trim()
+              : milestoneSelect?.value || "";
+
             return {
+              milestone_achieved: milestoneValue,
               pcode: row.querySelector(".milestone-pcode")?.value || "",
               project_name:
                 row.querySelector(".milestone-project_name")?.value || "",
-              milestone_achieved:
-                row.querySelector(".milestone-achieved")?.value || "",
-              special_notes: row.querySelector(".milestone-notes")?.value || "",
+              special_notes: /other/i.test(milestoneSelect?.value || "")
+                ? (otherInput?.value || "").trim()
+                : "",
             };
           })
           .filter(function (r) {
             return (
+              r.milestone_achieved ||
               r.pcode ||
               r.project_name ||
-              r.milestone_achieved ||
               r.special_notes
             );
           });
       }
 
       function collectWorkRows() {
-        return Array.from(document.querySelectorAll("#work-rows .work-row"))
-          .map(function (row) {
-            const memberSelect = row.querySelector(".name");
-            const projectSelect = row.querySelector(".project_name");
+        const members = collectTeamInfoRows().filter(function (m) {
+          return m.name && m.member_key;
+        });
 
-            const memberOpt = memberSelect?.selectedOptions?.[0];
-            const projectOpt = projectSelect?.selectedOptions?.[0];
+        const rows = [];
 
-            return {
-              member_key: memberSelect?.value || "",
-              name:
-                memberOpt?.dataset.memberName || memberOpt?.textContent || "",
-              designation: memberOpt?.dataset.designation || "",
-              project_name:
-                projectOpt?.dataset.projectName ||
-                projectOpt?.textContent ||
-                "",
-              pcode: row.querySelector(".pcode")?.value || "",
-              task_description:
-                row.querySelector(".task_description")?.value || "",
-              time_spent: row.querySelector(".time_spent")?.value || "",
-              status: row.querySelector(".status")?.value || "",
-              remarks: row.querySelector(".remarks")?.value || "",
-            };
-          })
-          .filter(function (r) {
-            return (
-              r.name ||
-              r.project_name ||
-              r.pcode ||
-              r.task_description ||
-              r.time_spent ||
-              r.status ||
-              r.remarks
-            );
+        document
+          .querySelectorAll("#work-rows tbody tr[data-pcode]")
+          .forEach(function (tr) {
+            const pcode = tr.dataset.pcode || "";
+            const projectName = tr.dataset.projectName || "";
+            const cells = Array.from(tr.querySelectorAll(".cell-stack"));
+
+            cells.forEach(function (cell, index) {
+              const taskEl = cell.querySelector(".matrix-task");
+              const timeEl = cell.querySelector(".matrix-time");
+              const member = members[index];
+
+              const timeValue =
+                timeEl && timeEl.value !== "" ? timeEl.value : "0";
+              const taskValue = taskEl ? taskEl.value.trim() : "";
+
+              rows.push({
+                member_key: member ? member.member_key : "",
+                name: member ? member.name : "",
+                designation: member ? member.designation : "",
+                project_name: projectName,
+                pcode: pcode,
+                task_description: taskValue,
+                time_spent: timeValue,
+              });
+            });
           });
+
+        return rows;
       }
 
       function updateTotalWorkingHours() {
         const roster = collectTeamInfoRows();
+
         const expected = roster.reduce(function (sum, member) {
           return sum + (parseFloat(member.working_days) || 0) * HOURS_PER_DAY;
         }, 0);
@@ -866,8 +1012,14 @@ None
           highlights: document.getElementById("highlight").value,
           low_points_complaints: document.getElementById("low").value,
           challenges_faced: document.getElementById("challenge").value,
-          internal_bottlenecks: document.getElementById("ibottle").value,
-          external_bottlenecks: document.getElementById("ebottle").value,
+          internal_bottlenecks: getSelectValueOrOther(
+            "ibottle",
+            "ibottle-other",
+          ),
+          external_bottlenecks: getSelectValueOrOther(
+            "ebottle",
+            "ebottle-other",
+          ),
           projected_targets_next_week:
             document.getElementById("nextWeek").value,
 
@@ -890,13 +1042,12 @@ None
 
         google.script.run
           .withSuccessHandler(function (res) {
-            alert(
-              "WPF01 submitted successfully\n\nSubmission ID: " +
-                res.submission_id,
-            );
+            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
+            document.body.innerHTML =
+              "<h1>Thank You, your response has been submitted</h1>";
           })
           .withFailureHandler(function (err) {
-            alert("Submission failed: " + err.message);
+            console.error("ERROR:", err); // 👈 important
           })
           .submitWPF01(payload);
       }

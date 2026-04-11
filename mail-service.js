@@ -1,5 +1,5 @@
 function sendFormEmail(formCode, payload, submissionId) {
-  const recipients = "replace-with-your-recipients@company.com";
+  const recipients = "pranav.mathur@perfactgroup.in";
   const subject = formCode + " submitted - " + submissionId;
   const body = buildEmailBody(formCode, payload, submissionId);
 
@@ -45,23 +45,51 @@ function buildEmailBody(formCode, payload, submissionId) {
 }
 
 function sendWPF01Email(payload, submissionId) {
-  const recipients = "pranav.mathur@perfactgroup.in";
+  // const to = "priority.wg@perfactgroup.in, gov.council@perfactgroup.in";
+  // const cc = buildTeamCc(payload.team_name) + ", pranav.mathur@perfactgroup.in";
+  const to = "pranav.mathur@perfactgroup.in";
   const subject =
-    "WPF01 | " +
+    "Team Performance of " +
     (payload.team_name || "") +
-    " | " +
+    " for the week (" +
     (payload.week_start || "") +
     " to " +
-    (payload.week_end || "");
+    (payload.week_end || "") +
+    ")";
 
   const htmlBody = buildWPF01EmailHtml(payload, submissionId);
-  GmailApp.sendEmail(recipients, subject, "HTML email required", {
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
     htmlBody: htmlBody,
+    name: "WPF01",
+    // cc: cc,
   });
+}
+
+function buildTeamCc(teamName) {
+  const safe = String(teamName || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  return safe ? safe + "@perfactgroup.in" : "";
 }
 
 function buildWPF01EmailHtml(payload, submissionId) {
   const esc = escapeHtml;
+
+  function row(cells) {
+    return `
+      <tr>
+        ${cells
+          .map(
+            (c) =>
+              `<td style="border:1px solid #ccc;padding:6px;vertical-align:top;">${esc(
+                String(c ?? ""),
+              )}</td>`,
+          )
+          .join("")}
+      </tr>
+    `;
+  }
 
   function table(title, headers, rowsHtml) {
     return `
@@ -73,7 +101,9 @@ function buildWPF01EmailHtml(payload, submissionId) {
               ${headers
                 .map(
                   (h) =>
-                    `<th style="border:1px solid #ccc;padding:6px;text-align:left;background:#f5f5f5;">${esc(h)}</th>`,
+                    `<th style="border:1px solid #ccc;padding:6px;text-align:left;background:#f5f5f5;">${esc(
+                      h,
+                    )}</th>`,
                 )
                 .join("")}
             </tr>
@@ -86,21 +116,8 @@ function buildWPF01EmailHtml(payload, submissionId) {
     `;
   }
 
-  function row(cells) {
-    return `
-      <tr>
-        ${cells
-          .map(
-            (c) =>
-              `<td style="border:1px solid #ccc;padding:6px;vertical-align:top;">${esc(String(c ?? ""))}</td>`,
-          )
-          .join("")}
-      </tr>
-    `;
-  }
-
-  const mainRows = [
-    row(["Submission ID", submissionId]),
+  const summaryRows = [
+    // row(["Submission ID", submissionId]),
     row(["Week Start Date", payload.week_start || ""]),
     row(["Week End Date", payload.week_end || ""]),
     row(["Team Name", payload.team_name || ""]),
@@ -108,6 +125,8 @@ function buildWPF01EmailHtml(payload, submissionId) {
     row(["Milestone achieved this week", payload.milestone_achieved || ""]),
     row(["Number of Active Projects", payload.number_of_active_projects || ""]),
     row(["Total Working Hours", payload.total_working_hours || ""]),
+    row(["Internal Bottlenecks", payload.internal_bottlenecks || ""]),
+    row(["External Bottlenecks", payload.external_bottlenecks || ""]),
   ].join("");
 
   const tfRows = (payload.tf_details || [])
@@ -126,9 +145,9 @@ function buildWPF01EmailHtml(payload, submissionId) {
     .map((r, i) =>
       row([
         i + 1,
+        r.milestone_achieved || "",
         r.pcode || "",
         r.project_name || "",
-        r.milestone_achieved || "",
         r.special_notes || "",
       ]),
     )
@@ -142,7 +161,6 @@ function buildWPF01EmailHtml(payload, submissionId) {
         r.designation || "",
         r.working_days || "",
         r.site_visit_days || "",
-        r.remarks || "",
       ]),
     )
     .join("");
@@ -156,8 +174,6 @@ function buildWPF01EmailHtml(payload, submissionId) {
         r.pcode || "",
         r.task_description || "",
         r.time_spent || "",
-        r.status || "",
-        r.remarks || "",
       ]),
     )
     .join("");
@@ -171,13 +187,13 @@ function buildWPF01EmailHtml(payload, submissionId) {
         has been submitted successfully for your review.
       </p>
 
-      ${table("Submission Summary", ["Field", "Value"], mainRows)}
+      ${table("Submission Summary", ["Field", "Value"], summaryRows)}
       ${table("Number of TFs Filled", ["#", "TF Name", "Planned Last Week", "Achieving This Week", "Plan for Next Week"], tfRows)}
-      ${table("Details of Milestone Achieved", ["#", "PCODE", "Project Name", "Milestone Achieved", "Special Notes"], milestoneRows)}
-      ${table("Weekly Team Work Info", ["#", "Name", "Designation", "Working Days", "Site Visit Days", "Remarks"], teamInfoRows)}
-      ${table("Weekly Team Work Details", ["#", "Name", "Project Name", "PCODE", "Task Description", "Time Spent", "Status", "Remarks"], workRows)}
+      ${table("Details of Milestone Achieved", ["#", "Milestone Achieved", "PCODE", "Project Name", "Please Specify"], milestoneRows)}
+      ${table("Weekly Team Work Info", ["#", "Name", "Designation", "Working Days", "Site Visit Days"], teamInfoRows)}
+      ${table("Weekly Team Work Details", ["#", "Name", "Project Name", "PCODE", "Task Description", "Time Spent"], workRows)}
 
-      <p style="margin-top:18px;">Regards,<br/>PG Intranet</p>
+      <p style="margin-top:18px;">Regards,<br/>WPF01</p>
     </div>
   `;
 }

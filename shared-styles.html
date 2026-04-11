@@ -210,4 +210,124 @@
     cursor: pointer;
     color: var(--text-main);
   }
+
+  .range-stack {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .range-value {
+    min-width: 22px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  .tf-slider-label {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .matrix-wrapper {
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+
+  .work-matrix-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  /* Make table wide and breathable */
+  .matrix-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed; /* 🔥 core rule */
+    width: max-content; /* 🔥 allows horizontal scroll */
+    min-width: 100%; /* keeps initial view clean */
+    font-size: 13px;
+  }
+
+  /* Work done text */
+  .matrix-table textarea {
+    width: 100%;
+    max-width: 100%;
+    min-height: 70px;
+    resize: vertical;
+    font-size: 12px;
+  }
+
+  /* Sticky header */
+  .matrix-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f9fafb;
+    z-index: 3;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  /* Project Name */
+  .col-project {
+    width: 260px;
+  }
+
+  /* PCODE */
+  .col-pcode {
+    width: 120px;
+  }
+
+  /* Each member column (Work + Time grouped visually) */
+  .col-member {
+    width: 220px;
+  }
+
+  /* Time input */
+  .matrix-table input.matrix-time {
+    width: 80px;
+    text-align: center;
+  }
+
+  /* Alternate row shading */
+  .matrix-table tbody tr:nth-child(even) {
+    background: #fafafa;
+  }
+
+  /* General cells */
+  .matrix-table td,
+  .matrix-table th {
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  /* Member headers */
+  .matrix-member-head {
+    min-width: 220px;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  .matrix-table input[type="number"] {
+    width: 70px;
+    text-align: center;
+  }
+
+  .matrix-table textarea,
+  .matrix-table input {
+    width: 100%;
+    box-sizing: border-box; /* 🔥 critical */
+    padding: 6px;
+  }
+
+  .cell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 </style>

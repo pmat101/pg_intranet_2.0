@@ -7,7 +7,7 @@ function submitForm(formCode, payload) {
 
 function submitWPF01(payload) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  lock.waitLock(500);
 
   try {
     const db = getDB();
