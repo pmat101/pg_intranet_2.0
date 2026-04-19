@@ -45,9 +45,8 @@ function buildEmailBody(formCode, payload, submissionId) {
 }
 
 function sendWPF01Email(payload, submissionId) {
-  // const to = "priority.wg@perfactgroup.in, gov.council@perfactgroup.in";
-  // const cc = buildTeamCc(payload.team_name) + ", pranav.mathur@perfactgroup.in";
-  const to = "pranav.mathur@perfactgroup.in";
+  const to = "priority.wg@perfactgroup.in, gov.council@perfactgroup.in";
+  const cc = buildTeamCc(payload.team_name) + ", pranav.mathur@perfactgroup.in";
   const subject =
     "Team Performance of " +
     (payload.team_name || "") +
@@ -62,7 +61,7 @@ function sendWPF01Email(payload, submissionId) {
   GmailApp.sendEmail(to, subject, "HTML email required", {
     htmlBody: htmlBody,
     name: "WPF01",
-    // cc: cc,
+    cc: cc,
   });
 }
 
@@ -205,4 +204,73 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function sendBD01AEmail(payload, submissionId, proposalID, pcode) {
+  const to = `glacier@perfactgroup.in, ${payload.officialEmail}`;
+  const ccList = [payload.officialEmail].filter(Boolean).join(",");
+
+  const subject = `New Proposal lead for ${payload.customerCompany} having ID ${proposalID} has been created successfully`;
+  const htmlBody = buildBD01AEmailHtml(
+    payload,
+    submissionId,
+    proposalID,
+    pcode,
+  );
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "BD-01(A)",
+    cc: ccList,
+  });
+}
+
+function buildBD01AEmailHtml(payload, submissionId, proposalID, pcode) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${payload.formFillerFirstName} ${payload.formFillerLastName},</p>
+      <p>Your Proposal ID ${proposalID} dated ${payload.leadDate} has been generated successfully</p>  
+
+      <table style="border-collapse:collapse;width:100%;font-size:13px;">
+        <tbody>
+          ${row("Submission ID", submissionId)}
+          ${row("Proposal ID", proposalID)}
+          ${row("PCODE", pcode)}
+          ${row("Lead Date", payload.leadDate)}
+          ${row("Form Filler", `${payload.formFillerFirstName || ""} ${payload.formFillerLastName || ""}`.trim())}
+          ${row("Official Email", payload.officialEmail)}
+          ${row("Customer Company", payload.customerCompany)}
+          ${row("Customer Name", `${payload.customerFirstName || ""} ${payload.customerLastName || ""}`.trim())}
+          ${row("Customer Contact", payload.customerContact)}
+          ${row("Customer Email", payload.customerEmail)}
+          ${row("Repeat Customer", payload.isRepeatCustomer)}
+          ${row("Activity Proposed", payload.activityProposed)}
+          ${row("Location", [payload.village, payload.taluka, payload.district, payload.state, payload.postalCode, payload.country].filter(Boolean).join(", "))}
+          ${row("ST/UT", payload.stUt)}
+          ${row("Work Type", payload.workType)}
+          ${row("Sector", payload.sector)}
+          ${row("Specifications", payload.specs)}
+          ${row("Financial Year", payload.finYear)}
+          ${row("PG Company", payload.pgCompany)}
+          ${row("Customer Classification", payload.customerClass)}
+          ${row("Lead Source", payload.leadSource)}
+          ${row("RFQ / Scope URL", payload.rfqUrl)}
+          ${row("Remarks", payload.remarks)}
+        </tbody>
+      </table>
+
+      <p style="margin-top:18px;">Regards,<br/>BD-01(A)</p>
+    </div>
+  `;
 }

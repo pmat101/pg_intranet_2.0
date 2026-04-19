@@ -289,3 +289,134 @@ function firstPcodeFromWPF(payload) {
 
   return "";
 }
+
+function submitBD01A(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const db = getDB();
+    const sheet = db.getSheetByName("bd01a");
+    if (!sheet) throw new Error("Missing sheet: bd01a");
+
+    payload = payload || {};
+
+    validateBD01AServer(payload);
+
+    const now = new Date();
+    const submissionId = Utilities.getUuid();
+    const ids = genProposalIDnPCODE(payload);
+    const proposalID = ids.proposalID;
+    const pcode = ids.pcode;
+
+    payload.submission_id = submissionId;
+    payload.proposal_id = proposalID;
+    payload.pcode = pcode;
+
+    appendBD01ARow(sheet, payload, submissionId, proposalID, pcode, now);
+
+    appendSubmissionLedger(db, {
+      submissionId: submissionId,
+      formCode: "BD01A",
+      pcode: pcode,
+      createdBy: payload.officialEmail || "",
+      now: now,
+      payload: payload,
+    });
+
+    appendAuditLog(db, {
+      submissionId: submissionId,
+      formCode: "BD01A",
+      createdBy: payload.officialEmail || "",
+      now: now,
+      payload: payload,
+    });
+
+    sendBD01AEmail(payload, submissionId, proposalID, pcode);
+
+    return {
+      ok: true,
+      submission_id: submissionId,
+      proposalID: proposalID,
+      pcode: pcode,
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validateBD01AServer(payload) {
+  const required = [
+    ["leadDate", "Date of Client's Mail/ Lead Generation"],
+    ["formFillerFirstName", "Form filler first name"],
+    ["formFillerLastName", "Form filler last name"],
+    ["officialEmail", "Official Email ID"],
+    ["customerCompany", "Customer's Company Legal Name"],
+    ["customerContact", "Customer contact number"],
+    ["customerEmail", "Customer Email"],
+    ["customerEmailConfirm", "Confirm Email"],
+    ["isRepeatCustomer", "Repeat customer yes/no"],
+    ["activityProposed", "Type of Activity Proposed"],
+    ["stUt", "ST/UT"],
+    ["workType", "Type of Work"],
+    ["specs", "Specifications"],
+    ["finYear", "Financial Year"],
+    ["pgCompany", "Perfact group company name"],
+    ["customerClass", "Customer Classification"],
+    ["leadSource", "Lead Source"],
+  ];
+
+  const missing = required
+    .filter(([key]) => !String(payload[key] || "").trim())
+    .map(([, label]) => label);
+
+  if (
+    payload.customerEmail &&
+    payload.customerEmailConfirm &&
+    String(payload.customerEmail).trim() !==
+      String(payload.customerEmailConfirm).trim()
+  ) {
+    missing.push("Customer email and confirm email do not match");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill: " + missing.join(", "));
+  }
+}
+
+function appendBD01ARow(sheet, payload, submissionId, proposalID, pcode, now) {
+  sheet.appendRow([
+    submissionId,
+    now,
+    proposalID,
+    pcode,
+    payload.leadDate || "",
+    payload.formFillerFirstName || "",
+    payload.formFillerLastName || "",
+    payload.officialEmail || "",
+    payload.customerCompany || "",
+    payload.customerFirstName || "",
+    payload.customerLastName || "",
+    payload.customerContact || "",
+    payload.customerEmail || "",
+    payload.customerEmailConfirm || "",
+    payload.isRepeatCustomer || "",
+    payload.activityProposed || "",
+    payload.village || "",
+    payload.taluka || "",
+    payload.district || "",
+    payload.state || "",
+    payload.postalCode || "",
+    payload.country || "",
+    payload.stUt || "",
+    payload.workType || "",
+    payload.sector || "",
+    payload.specs || "",
+    payload.finYear || "",
+    payload.pgCompany || "",
+    payload.customerClass || "",
+    payload.leadSource || "",
+    payload.rfqUrl || "",
+    payload.remarks || "",
+  ]);
+}

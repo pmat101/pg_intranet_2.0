@@ -39,11 +39,27 @@ function getNextProjectSerial() {
   }
 }
 
-function genProposalIDnPCODE(pgCompany, stateCode, typeOfWork, sector, specs) {
-  const serial = getNextProjectSerial(); // 👈 Fetches and increments serial
-  const finYear = new Date().getFullYear().toString().slice(-2); // 👈 Gets the last two digits of the current year
-  const proposalID = `${pgCompany}${finYear}${stateCode}${serial}${typeOfWork}${sector}${specs}`;
-  const pcode = `${pgCompany}${finYear}${stateCode}${serial}`;
+function normalizeCode(value, maxLen) {
+  return String(value || "")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, maxLen || 3);
+}
+
+function genProposalIDnPCODE(payload) {
+  const serial = getNextProjectSerial();
+  const finYear = String(payload.finYear || new Date().getFullYear()).slice(-2);
+
+  const pgCompany = normalizeCode(payload.pgCompany, 3);
+  const stateCode = normalizeCode(payload.stUt || payload.state, 3);
+  const serialCode = String(serial);
+  const typeOfWork = normalizeCode(payload.workType, 3);
+  const sector = normalizeCode(payload.sector, 3);
+  const specs = normalizeCode(payload.specs, 3);
+
+  const proposalID = `${pgCompany}${finYear}${stateCode}${serialCode}${typeOfWork}${sector}${specs}`;
+  const pcode = `${pgCompany}${finYear}${stateCode}${serialCode}`;
+
   return { proposalID, pcode };
 }
 

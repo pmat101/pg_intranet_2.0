@@ -760,6 +760,51 @@
           html += "</tr>";
         });
 
+        // Miscellaneous row
+        html +=
+          '<tr data-pcode="N/A" data-project-name="Miscellaneous / Non-project work" data-misc="1">';
+        html += '<td class="col-project">Miscellaneous / Non-project work</td>';
+        html += '<td class="col-pcode">N/A</td>';
+
+        members.forEach(function (m) {
+          const key = "N/A__" + m.member_key;
+          const prev = saved[key] || {};
+
+          html +=
+            '<td class="col-member">' +
+            '<div class="cell-stack">' +
+            '<textarea class="matrix-task" placeholder="Non-project work" ' +
+            'data-member-key="' +
+            escapeHtmlClient(m.member_key) +
+            '" ' +
+            'data-member-name="' +
+            escapeHtmlClient(m.name) +
+            '" ' +
+            'data-designation="' +
+            escapeHtmlClient(m.designation || "") +
+            '" ' +
+            'data-pcode="N/A">' +
+            escapeHtmlClient(prev.task || "") +
+            "</textarea>" +
+            '<input type="number" class="matrix-time" min="0" step="0.5" required ' +
+            'data-member-key="' +
+            escapeHtmlClient(m.member_key) +
+            '" ' +
+            'data-member-name="' +
+            escapeHtmlClient(m.name) +
+            '" ' +
+            'data-designation="' +
+            escapeHtmlClient(m.designation || "") +
+            '" ' +
+            'data-pcode="N/A" ' +
+            'value="' +
+            escapeHtmlClient(prev.time !== undefined ? prev.time : "0") +
+            '">' +
+            "</div></td>";
+        });
+
+        html += "</tr>";
+
         html += "</tbody></table>";
 
         container.innerHTML = html;
