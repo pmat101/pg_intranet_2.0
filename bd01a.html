@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BD-01(A)</title>
-    <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
+    <?!= HtmlService.createHtmlOutputFromFile('shared-styles').getContent(); ?>
     ?>
   </head>
   <body>
@@ -411,6 +411,8 @@
                 "PCODE: " +
                 res.pcode,
             );
+            document.body.innerHTML =
+              "<h1>Thank You, your response has been submitted</h1>";
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);

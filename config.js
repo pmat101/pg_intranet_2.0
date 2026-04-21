@@ -1,5 +1,15 @@
 function getDropdownData() {
   const cache = CacheService.getScriptCache();
+
+  const cached = cache.get("dropdown_data_v2");
+
+  let data;
+
+  if (cached) {
+    data = JSON.parse(cached);
+  } else {
+  }
+  const cache = CacheService.getScriptCache();
   const cached = cache.get("dropdown_data_v1");
   if (cached) return JSON.parse(cached);
   const data = {
@@ -643,6 +653,20 @@ function getDropdownData() {
       "QRA submission",
       "Other",
     ],
+
+    gstTreatment: [
+      "PESPL Delhi",
+      "PESPL LKO",
+      "PESPL Gujarat",
+      "PESPL Chennai",
+      "PRPL Delhi",
+      "PRPL Gurgaon",
+      "PS Delhi",
+      "PS Gurgaon",
+      "PWMPL Delhi",
+      "PAWSPL Delhi",
+    ],
+    prMode: ["PPIP", "PPTP", "PPNP"],
   };
   cache.put("dropdown_data_v1", JSON.stringify(data), 300); // cache 5 minutes
   return data;
