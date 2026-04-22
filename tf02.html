@@ -210,15 +210,24 @@
           <textarea id="key_points_queries"></textarea>
           <div class="helper-text">
             List the specific, non-negotiable key points of EAC which they
-            asked.
+            asked. Document the question/observation and the required
+            action/data.
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="eac_future_focus"
-            >EAC’s Future Focus / Issues <span class="required">*</span></label
+            >EAC's Future Focus / Issues <span class="required">*</span></label
           >
-          <textarea id="eac_future_focus"></textarea>
+          <textarea
+            id="eac_future_focus"
+            placeholder="e.g. increased focus on specific environmental parameters, CSR activities, or cumulative impact assessment methodologies"
+          ></textarea>
+          <div class="helper-text">
+            Identify points for future/ issues that EAC is focusing on mostly.
+            These may be recurring themes, broader policy emphases or specific
+            technical aspects the Committee is for future project assessments
+          </div>
         </div>
 
         <div class="form-group">
@@ -226,6 +235,7 @@
             >Suggestions on FAE Reports <span class="required">*</span></label
           >
           <textarea id="fae_suggestions"></textarea>
+          <div class="helper-text">Document any suggestions in FAE reports if any (format, content, data quality or methodology) made by the EAC, the Project Proponent or the technical reviewers
         </div>
 
         <div class="form-group">
@@ -233,6 +243,7 @@
             >Change in PPT Format <span class="required">*</span></label
           >
           <textarea id="ppt_changes"></textarea>
+          <div class="helper-text">Document any change in PPT format (structural, content or visual) that was suggested or mandated by the EAC for this case or for future presentations.</div>
         </div>
 
         <div class="form-group">
@@ -240,6 +251,7 @@
             >Immediate Actions Required <span class="required">*</span></label
           >
           <textarea id="immediate_actions"></textarea>
+          <div class="helper-text">Outline the specific, prioritised reply/submittal actions needed immediately. Include the responsible team/person and the internal/external deadline.</div>
         </div>
 
         <div class="form-group">
@@ -248,6 +260,7 @@
             <span class="required">*</span></label
           >
           <textarea id="post_submittal_points"></textarea>
+          <div class="helper-text">Note all follow-up actions, coordination requirements or documentation steps necessary after the primary reply is submitted (e.g., site visits, public hearing follow-ups, data validation checks or final document archiving)</div>
         </div>
 
         <div class="form-group">
@@ -256,6 +269,7 @@
             <span class="required">*</span></label
           >
           <textarea id="key_learnings"></textarea>
+          <div class="helper-text">Capture critical, actionable insights and learnings for the team and FAEs etc. specific to the preparation and the meeting itself. Focus on improving future work</div>
         </div>
 
         <div class="form-group">
@@ -264,6 +278,7 @@
             <span class="required">*</span></label
           >
           <textarea id="struggles_and_reason"></textarea>
+          <div class="helper-text">Detail which points we struggled in the meeting and reason. Be specific and honest to drive systemic change.</div>
         </div>
 
         <div class="form-group">
@@ -272,6 +287,7 @@
             <span class="required">*</span></label
           >
           <textarea id="future_implications"></textarea>
+          <div class="helper-text">Based on the EAC feedback and internal struggles, identify what future projects to consider for strategy. Mandatory changes or best practices that must be implemented starting from the inception stage of future, similar EIA projects</div>
         </div>
 
         <div class="form-group">
@@ -310,6 +326,7 @@
             >Warning Signs <span class="required">*</span></label
           >
           <textarea id="warning_signs"></textarea>
+          <div class="helper-text">Explicitly document any critical, non-negotiable issues or red flags raised by the EAC that may affect the final recommendation or future EC compliance.</div>
         </div>
 
         <div class="form-group">
@@ -356,17 +373,17 @@
             data = data || {};
             fillSelect(
               document.getElementById("team_name"),
-              data.tf02Teams || [],
+              data.team || [],
               "Select",
             );
             fillSelect(
               document.getElementById("eia_coordinator_name"),
-              data.tf02EiaCoordinators || [],
+              data.eiaCoordinator || [],
               "Select",
             );
             fillSelect(
               document.getElementById("meeting_type"),
-              data.tf02MeetingTypes || [],
+              data.meetingType || [],
               "Select",
             );
             fillSelect(

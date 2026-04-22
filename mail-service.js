@@ -244,7 +244,6 @@ function buildBD01AEmailHtml(payload, submissionId, proposalID, pcode) {
 
       <table style="border-collapse:collapse;width:100%;font-size:13px;">
         <tbody>
-          ${row("Submission ID", submissionId)}
           ${row("Proposal ID", proposalID)}
           ${row("PCODE", pcode)}
           ${row("Lead Date", payload.leadDate)}
@@ -342,7 +341,7 @@ function buildBD02EmailHtml(payload, submissionId) {
   ].join("");
 
   const projectRows = [
-    row("Submission ID", submissionId),
+    // row("Submission ID", submissionId),
     row("Project Name", payload.projectName || ""),
     row("Project Location", payload.projectLocation || ""),
     row("Proposal ID", payload.proposalId || ""),
@@ -405,22 +404,6 @@ function buildBD02EmailHtml(payload, submissionId) {
   `;
 }
 
-function sendBD03Email(payload, submissionId) {
-  const toList = `glacier@perfactgroup.in, ${payload.official_email}`;
-
-  const ccList = `${payload.csuite_officer_email}, ${payload.eia_coordinator_email}, ${payload.team_name}@perfactgroup.in, accounts@perfactgroup.in`;
-
-  const subject = `New Project with PCode ${payload.pcode} of ${payload.project_name} has been won and assigned to ${payload.team_name}`;
-
-  const htmlBody = buildBD03EmailHtml(payload, submissionId);
-
-  GmailApp.sendEmail(toList, subject, "HTML email required", {
-    htmlBody: htmlBody,
-    name: "BD03",
-    cc: ccList,
-  });
-}
-
 function buildBD03EmailHtml(payload, submissionId) {
   const esc = escapeHtml;
 
@@ -445,7 +428,7 @@ function buildBD03EmailHtml(payload, submissionId) {
   }
 
   const mainRows = [
-    row("Submission ID", submissionId),
+    // row("Submission ID", submissionId),
     row("Lead Date", payload.lead_date || ""),
     row(
       "Form Filler",
@@ -520,15 +503,20 @@ function buildBD03EmailHtml(payload, submissionId) {
     .map((r, i) =>
       row(
         i + 1,
-        `${r.milestone_no || ""} | ${r.milestone_name || ""} | ${r.planned_date || ""} | ${r.billing_percent || ""}`,
+        [
+          `Name: ${r.milestone_name || ""}`,
+          `Details: ${r.milestone_details || ""}`,
+          `Timeline: ${r.timeline || ""}`,
+          `% Billing: ${r.billing_percent || ""}`,
+        ].join(" | "),
       ),
     )
     .join("");
 
   return `
     <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
-      <p>Dear Team,</p>
-      <p>BD03 has been submitted successfully.</p>
+      <p>Dear ${payload.formFillerFirstName || ""} ${payload.formFillerLastName || ""},</p>
+      <p>New Project with PCode ${payload.pcode || ""} of ${payload.project_name || ""} has been won and assigned to ${payload.team_name || ""} </p>
 
       ${section("Main Details", mainRows)}
       ${section("Any other person whom details to be shared", otherPersonsRows || row("1", "No additional persons added"))}
@@ -561,7 +549,7 @@ function buildBD03EmailHtml(payload, submissionId) {
 
 function sendTF02Email(p, submissionId) {
   const to = `${p.employee_email}`;
-  const ccList = `info@perfactgroup.in, teameia@perfactgroup.in, ${p.eia_coordinator_name}@perfactgroup.in, ${p.teamName}@perfactgroup.in`;
+  const ccList = `info@perfactgroup.in, teameia@perfactgroup.in, ${p.eia_coordinator_name}@perfactgroup.in, ${buildTeamCc(payload.team_name)}`;
   const subject = `Submission on appraisal meeting dated- ${p.meeting_date || ""} completion of Project- ${p.project_name || ""} for ${p.meeting_type || ""} -meeting at Agenda no. ${p.agenda_number || ""} in committee- ${p.committee_name || ""}`;
   const htmlBody = buildTF02EmailHtml(p, submissionId);
 
@@ -596,7 +584,7 @@ function buildTF02EmailHtml(p, submissionId) {
   }
 
   const summaryRows = [
-    row("Submission ID", submissionId),
+    // row("Submission ID", submissionId),
     row("Date", p.date || ""),
     row("Employee Email", p.employee_email || ""),
     row("Team Name", p.team_name || ""),
@@ -647,6 +635,305 @@ function buildTF02EmailHtml(p, submissionId) {
       </div>
 
       <p style="margin-top:18px;">Regards,<br/>TF02</p>
+    </div>
+  `;
+}
+
+function sendWPF03Email(payload, submissionId) {
+  const to = "priority.wg@perfactgroup.in, gov.council@perfactgroup.in";
+  const cc =
+    "fountain@perfactgroup.in, rachna.dogra@perfactgroup.in, pranav.mathur@perfactgroup.in";
+
+  const subject = `Team Performance of Fountain for the week ${payload.week_start_date || ""} to ${payload.week_end_date || ""}`;
+  const htmlBody = buildWPF03EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "WPF03",
+    cc: cc,
+  });
+}
+
+function buildWPF03EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const summaryRows = [
+    // row("Submission ID", submissionId),
+    row("Week Start Date", payload.week_start_date || ""),
+    row("Week End Date", payload.week_end_date || ""),
+    row("Team Name", payload.team_name || "Fountain"),
+    row("Test Reports Issued", payload.test_reports_issued || ""),
+    row("Test Reports Planned", payload.test_reports_planned || ""),
+    row("Monitorings Completed", payload.monitorings_completed || ""),
+    row("Monitorings Planned", payload.monitorings_planned || ""),
+    row("Data Review Priority", payload.data_review_priority || ""),
+    row("Highlights", payload.highlights || ""),
+    row("Low Points", payload.low_points || ""),
+    row("Challenges Faced", payload.challenges_faced || ""),
+    row(
+      "Projected Targets for Next Week",
+      payload.projected_targets_next_week || "",
+    ),
+    row("Weekly PPT Link", payload.weekly_ppt_link || ""),
+  ].join("");
+
+  const analysisRows = (payload.analysis_rows || [])
+    .map(function (r, i) {
+      return row(
+        `${i + 1}. ${r.analysis_item || ""}`,
+        `Planned: ${r.planned_last_week || ""} | Achieving: ${r.achieving_this_week || ""} | Next: ${r.plan_for_next_week || ""}`,
+      );
+    })
+    .join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Work Priority WG,</p>
+      <p>Team Performance of Fountain for the week ${payload.week_start_date || ""} to ${payload.week_end_date || ""} has been submitted successfully for your review.</p>
+
+      ${section("Submission Summary", summaryRows)}
+      ${section("Analysis", analysisRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>WPF03</p>
+    </div>
+  `;
+}
+
+function sendTF01Email(payload, submissionId) {
+  const to = payload.employee_email;
+  const cc = `logistics.wg@perfactgroup.in, top.management@perfactgroup.in, ${buildTeamCc(payload.team_name)}`;
+  const subject = `Requisition slip printing`;
+  const htmlBody = buildTF01EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF01",
+    cc: cc,
+  });
+}
+
+function buildTF01EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const mainRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Employee",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
+    ),
+    row("Employee Email", payload.employee_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  const projectRows = (payload.project_details || [])
+    .map(function (r, i) {
+      return row(
+        `Project ${i + 1}`,
+        [
+          `Project: ${r.project_name || ""}`,
+          `PCODE: ${r.pcode || ""}`,
+          `PP: ${r.pp_name || ""}`,
+          `Report: ${r.report_name || ""}`,
+          `Purpose: ${r.purpose_of_printing || ""}`,
+          `PDF: ${r.pdf_link || ""}`,
+          `Pages: ${r.no_of_pages || ""}`,
+          `Print: ${r.type_of_print || ""}`,
+          `Copies: ${r.no_of_copies || ""}`,
+        ].join(" | "),
+      );
+    })
+    .join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${payload.employee_first_name || ""} ${payload.employee_last_name || ""},</p>
+      <p>Your Requisition Slip For Printing response dated ${payload.date || ""} has been submitted successfully and sent for further processing.</p>
+
+      ${section("Main Details", mainRows)}
+      ${section("Project(s) Details", projectRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF01</p>
+    </div>
+  `;
+}
+
+function sendBD03Email(payload, submissionId) {
+  const recipients = buildBD03Recipients(payload);
+  const ccList = buildBD03CcList(payload);
+
+  const subject =
+    "BD03 | " + (payload.project_name || "") + " | " + (payload.team || "");
+
+  const htmlBody = buildBD03EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(recipients.to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "BD03",
+    cc: ccList.join(","),
+  });
+}
+
+function buildBD03Recipients(payload) {
+  const submitter = String(payload.official_email || "").trim();
+  const teamName = String(payload.team || "").trim();
+
+  // Replace this with your real Glacier team mailbox.
+  const teamMailboxByName = {
+    Glacier: "glacier@perfactgroup.in",
+  };
+
+  const teamMailbox = teamMailboxByName[teamName] || "";
+
+  return {
+    to: dedupeEmails([teamMailbox, submitter]),
+  };
+}
+
+function buildBD03CcList(payload) {
+  const staticCc = [
+    payload.csuite_officer_email,
+    payload.eia_coordinator_email,
+    "topmanagement@perfactgroup.in",
+    "accounts@perfactgroup.in",
+    "info@perfactgroup.in",
+    payload.team_head_email,
+  ];
+
+  const otherPeople = Array.isArray(payload.other_persons)
+    ? payload.other_persons.map(function (p) {
+        return p && p.email ? p.email : "";
+      })
+    : [];
+
+  return dedupeEmails(staticCc.concat(otherPeople));
+}
+
+function dedupeEmails(list) {
+  const seen = {};
+  return list
+    .map(function (x) {
+      return String(x || "").trim();
+    })
+    .filter(function (email) {
+      if (!email) return false;
+      const key = email.toLowerCase();
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+}
+
+function sendTF22Email(payload, submissionId) {
+  const toList = dedupeEmails([
+    payload.employee_email,
+    getTeamMailbox(payload.team_name),
+  ]);
+
+  const ccList = dedupeEmails([
+    "info@perfactgroup.in",
+    "accounts@perfactgroup.in",
+    "glacier@perfactgroup.in",
+  ]);
+
+  const subject = `TF22 | ${payload.project_name || ""} | ${payload.team_name || ""}`;
+  const htmlBody = buildTF22EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(
+    toList[0] || payload.employee_email,
+    subject,
+    "HTML email required",
+    {
+      htmlBody: htmlBody,
+      name: "TF22",
+      cc: ccList.join(","),
+    },
+  );
+}
+
+function getTeamMailbox(teamName) {
+  const team = String(teamName || "")
+    .trim()
+    .toLowerCase();
+  if (!team) return "";
+  return team.replace(/[^a-z0-9]+/g, "") + "@perfactgroup.in";
+}
+
+function buildTF22EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>TF22 has been submitted successfully.</p>
+
+      <table style="border-collapse:collapse;width:100%;font-size:13px;">
+        <tbody>
+          ${row("Date", payload.date || "")}
+          ${row("Employee Name", `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim())}
+          ${row("Employee Email", payload.employee_email || "")}
+          ${row("Team", payload.team_name || "")}
+          ${row("Type of Work", payload.type_of_work || "")}
+          ${row("Project Name", payload.project_name || "")}
+          ${row("Date of Completion", payload.date_of_completion || "")}
+          ${row("Project Code", payload.project_code || "")}
+          ${row("Type of Service", payload.type_of_service || "")}
+          ${row("Attachments URL", payload.attachments_url || "")}
+          ${row("Remarks", payload.remarks || "")}
+        </tbody>
+      </table>
+
+      <p style="margin-top:18px;">Regards,<br/>TF22</p>
     </div>
   `;
 }

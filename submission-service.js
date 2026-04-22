@@ -866,3 +866,351 @@ function appendTF02Row(sheet, p, submissionId, now) {
     p.remarks || "",
   ]);
 }
+
+function submitWPF03(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const db = getDB();
+    const now = new Date();
+    const submissionId = Utilities.getUuid();
+
+    payload = payload || {};
+    payload.submission_id = submissionId;
+    payload.team_name = "Fountain";
+
+    validateWPF03Server(payload);
+
+    writeWPF03Main(db, payload, submissionId, now);
+    writeWPF03AnalysisRows(db, payload, submissionId, now);
+
+    appendSubmissionLedger(db, {
+      submissionId: submissionId,
+      formCode: "WPF03",
+      pcode: "",
+      createdBy: payload.created_by || payload.team_name || "",
+      now: now,
+      payload: payload,
+    });
+
+    appendAuditLog(db, {
+      submissionId: submissionId,
+      formCode: "WPF03",
+      createdBy: payload.created_by || payload.team_name || "",
+      now: now,
+      payload: payload,
+    });
+
+    sendWPF03Email(payload, submissionId);
+
+    return {
+      ok: true,
+      submission_id: submissionId,
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validateWPF03Server(payload) {
+  if (!payload.week_start_date) throw new Error("Week Start Date is missing.");
+  if (!payload.week_end_date) throw new Error("Week End Date is missing.");
+  if (
+    !payload.analysis_rows ||
+    !Array.isArray(payload.analysis_rows) ||
+    payload.analysis_rows.length === 0
+  ) {
+    throw new Error("Analysis rows are required.");
+  }
+
+  const missingRows = [];
+  payload.analysis_rows.forEach(function (r, idx) {
+    if (!String(r.analysis_item || "").trim())
+      missingRows.push(`Analysis row ${idx + 1}: item`);
+    if (
+      r.planned_last_week === "" ||
+      r.planned_last_week === null ||
+      r.planned_last_week === undefined
+    ) {
+      missingRows.push(`Analysis row ${idx + 1}: planned last week`);
+    }
+    if (
+      r.achieving_this_week === "" ||
+      r.achieving_this_week === null ||
+      r.achieving_this_week === undefined
+    ) {
+      missingRows.push(`Analysis row ${idx + 1}: achieving this week`);
+    }
+    if (
+      r.plan_for_next_week === "" ||
+      r.plan_for_next_week === null ||
+      r.plan_for_next_week === undefined
+    ) {
+      missingRows.push(`Analysis row ${idx + 1}: plan for next week`);
+    }
+  });
+
+  if (missingRows.length) {
+    throw new Error(
+      "Please fill all analysis fields:\n\n" + missingRows.join("\n"),
+    );
+  }
+}
+
+function writeWPF03Main(db, payload, submissionId, now) {
+  const sheet = db.getSheetByName("WPF03_main");
+  if (!sheet) throw new Error("Missing sheet: WPF03_main");
+
+  appendObjectRow(
+    sheet,
+    {
+      week_start_date: payload.week_start_date || "",
+      week_end_date: payload.week_end_date || "",
+      team_name: payload.team_name || "",
+      test_reports_issued: payload.test_reports_issued || "",
+      test_reports_planned: payload.test_reports_planned || "",
+      monitorings_completed: payload.monitorings_completed || "",
+      monitorings_planned: payload.monitorings_planned || "",
+      data_review_priority: payload.data_review_priority || "",
+      highlights: payload.highlights || "",
+      low_points: payload.low_points || "",
+      challenges_faced: payload.challenges_faced || "",
+      projected_targets_next_week: payload.projected_targets_next_week || "",
+      weekly_ppt_link: payload.weekly_ppt_link || "",
+      remarks: payload.remarks || "",
+    },
+    {
+      submissionId: submissionId,
+      createdBy: payload.created_by || payload.team_name || "",
+      now: now,
+    },
+  );
+}
+
+function writeWPF03AnalysisRows(db, payload, submissionId, now) {
+  appendRowsFromArray(
+    db.getSheetByName("WPF03_analysis"),
+    payload.analysis_rows || [],
+    {
+      submissionId: submissionId,
+      createdBy: payload.created_by || payload.team_name || "",
+      now: now,
+    },
+  );
+}
+
+function submitTF01(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const db = getDB();
+    const now = new Date();
+    const submissionId = Utilities.getUuid();
+
+    payload = payload || {};
+    payload.submission_id = submissionId;
+
+    validateTF01(payload);
+
+    writeTF01Main(db, payload, submissionId, now);
+    writeTF01ProjectRows(db, payload, submissionId, now);
+
+    appendSubmissionLedger(db, {
+      submissionId: submissionId,
+      formCode: "TF01",
+      pcode: firstPcodeFromTF01(payload),
+      createdBy: payload.employee_email || "",
+      now: now,
+      payload: payload,
+    });
+
+    appendAuditLog(db, {
+      submissionId: submissionId,
+      formCode: "TF01",
+      createdBy: payload.employee_email || "",
+      now: now,
+      payload: payload,
+    });
+
+    sendTF01Email(payload, submissionId);
+
+    return {
+      ok: true,
+      submission_id: submissionId,
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validateTF01(payload) {
+  const missing = [];
+
+  if (!String(payload.date || "").trim()) missing.push("Date");
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Employee Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+
+  const rows = Array.isArray(payload.project_details)
+    ? payload.project_details
+    : [];
+  if (!rows.length) missing.push("PROJECT(S) DETAILS");
+
+  rows.forEach(function (r, idx) {
+    if (!String(r.project_name || "").trim())
+      missing.push(`Project row ${idx + 1}: Project Name`);
+    if (!String(r.pcode || "").trim())
+      missing.push(`Project row ${idx + 1}: PCODE`);
+    if (!String(r.pp_name || "").trim())
+      missing.push(`Project row ${idx + 1}: PP Name`);
+    if (!String(r.report_name || "").trim())
+      missing.push(`Project row ${idx + 1}: Report Name`);
+    if (!String(r.purpose_of_printing || "").trim())
+      missing.push(`Project row ${idx + 1}: Purpose of Printing`);
+    if (!String(r.pdf_link || "").trim())
+      missing.push(`Project row ${idx + 1}: PDF Link`);
+    if (
+      r.no_of_pages === "" ||
+      r.no_of_pages === null ||
+      r.no_of_pages === undefined
+    ) {
+      missing.push(`Project row ${idx + 1}: No. of Pages`);
+    }
+    if (!String(r.type_of_print || "").trim())
+      missing.push(`Project row ${idx + 1}: Type of Print`);
+    if (
+      r.no_of_copies === "" ||
+      r.no_of_copies === null ||
+      r.no_of_copies === undefined
+    ) {
+      missing.push(`Project row ${idx + 1}: No. of Copies`);
+    }
+  });
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function writeTF01Main(db, payload, submissionId, now) {
+  const sheet = db.getSheetByName("tf01_main");
+  if (!sheet) throw new Error("Missing sheet: tf01_main");
+
+  appendObjectRow(
+    sheet,
+    {
+      date: payload.date || "",
+      employee_first_name: payload.employee_first_name || "",
+      employee_last_name: payload.employee_last_name || "",
+      employee_email: payload.employee_email || "",
+      team_name: payload.team_name || "",
+      remarks: payload.remarks || "",
+    },
+    {
+      submissionId: submissionId,
+      createdBy: payload.employee_email || "",
+      now: now,
+    },
+  );
+}
+
+function writeTF01ProjectRows(db, payload, submissionId, now) {
+  appendRowsFromArray(
+    db.getSheetByName("tf01_project_details"),
+    payload.project_details || [],
+    {
+      submissionId: submissionId,
+      createdBy: payload.employee_email || "",
+      now: now,
+    },
+  );
+}
+
+function firstPcodeFromTF01(payload) {
+  const rows = payload.project_details || [];
+  for (const r of rows) {
+    if (r && r.pcode) return r.pcode;
+  }
+  return "";
+}
+
+function submitTF22(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const db = getDB();
+    const sheet = db.getSheetByName("tf22_main");
+    if (!sheet) throw new Error("Missing sheet: tf22_main");
+
+    payload = payload || {};
+    validateTF22(payload);
+
+    const now = new Date();
+    const submissionId = Utilities.getUuid();
+
+    sheet.appendRow([
+      submissionId,
+      now,
+      payload.date || "",
+      payload.employee_first_name || "",
+      payload.employee_last_name || "",
+      payload.employee_email || "",
+      payload.team_name || "",
+      payload.type_of_work || "",
+      payload.project_name || "",
+      payload.date_of_completion || "",
+      payload.project_code || "",
+      payload.type_of_service || "",
+      payload.attachments_url || "",
+      payload.remarks || "",
+    ]);
+
+    appendSubmissionLedger(db, {
+      submissionId: submissionId,
+      formCode: "TF22",
+      pcode: payload.project_code || "",
+      createdBy: payload.employee_email || "",
+      now: now,
+      payload: payload,
+    });
+
+    appendAuditLog(db, {
+      submissionId: submissionId,
+      formCode: "TF22",
+      createdBy: payload.employee_email || "",
+      now: now,
+      payload: payload,
+    });
+
+    sendTF22Email(payload, submissionId);
+
+    return {
+      ok: true,
+      submission_id: submissionId,
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validateTF22(payload) {
+  const missing = [];
+
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Employee Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team");
+  if (!String(payload.type_of_work || "").trim()) missing.push("Type of Work");
+  if (!String(payload.project_name || "").trim()) missing.push("Project Name");
+  if (!String(payload.date_of_completion || "").trim())
+    missing.push("Date of completion of project");
+  if (!String(payload.project_code || "").trim()) missing.push("Project Code");
+  if (!String(payload.type_of_service || "").trim())
+    missing.push("Type of Service");
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}

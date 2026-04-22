@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BD03</title>
-    <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
+    <?!= HtmlService.createHtmlOutputFromFile('shared-styles').getContent(); ?>
   </head>
   <body>
     <div class="form-wrapper">
@@ -52,10 +52,10 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="team_name"
-            >Team Name <span class="required">*</span></label
+          <label class="form-label" for="team">
+            Team Name <span class="required">*</span></label
           >
-          <select id="team_name" required></select>
+          <select id="team" required></select>
         </div>
 
         <div class="form-group">
@@ -281,7 +281,7 @@
         </div>
 
         <div class="section-heading" style="margin-top: 18px">
-          Milestone achieved details
+          Project Milestones & Billing Plan
         </div>
         <div id="milestone-rows"></div>
         <button type="button" class="btn-secondary" id="add-milestone">
@@ -517,18 +517,18 @@
             data = data || {};
 
             fillSelect(
-              document.getElementById("team_name"),
-              data.bd03Teams || [],
+              document.getElementById("team"),
+              data.team || [],
               "Select",
             );
             fillSelect(
               document.getElementById("csuite_officer_name"),
-              data.csuiteOfficers || [],
+              data.csuite || [],
               "Select",
             );
             fillSelect(
               document.getElementById("eia_coordinator_name"),
-              data.eiaCoordinators || [],
+              data.eiaCoordinator || [],
               "Select",
             );
             fillSelect(
@@ -544,27 +544,27 @@
             );
             fillSelect(
               document.getElementById("category"),
-              data.categories || [],
+              data.category || [],
               "Select",
             );
             fillSelect(
               document.getElementById("service_type_code_nabet_sector"),
-              data.serviceTypeCodes || [],
+              data.sector || [],
               "Select",
             );
             fillSelect(
               document.getElementById("baseline_season"),
-              data.baselineSeasons || [],
+              data.baselineSeason || [],
               "Select",
             );
             fillSelect(
               document.getElementById("eac_name"),
-              data.eacNames || [],
+              data.eac || [],
               "Select",
             );
             fillSelect(
               document.getElementById("pg_company"),
-              data.pgCompanies || [],
+              data.pgCompany || [],
               "Select",
             );
           })
@@ -644,17 +644,17 @@
         const row = document.createElement("div");
         row.className = "milestone-row";
         row.innerHTML = `
-          <input type="hidden" class="row-key" value="${makeKey("MS")}">
-          <div class="form-row">
-            <div class="form-col"><input type="text" class="ms-no" placeholder="Milestone number"></div>
-            <div class="form-col"><input type="text" class="ms-name" placeholder="Milestone name"></div>
-            <div class="form-col"><input type="date" class="ms-planned-date"></div>
-            <div class="form-col"><input type="number" class="ms-billing" step="0.01" placeholder="% billing"></div>
-            <div style="width:48px; display:flex; align-items:center;">
-              <button type="button" class="btn-secondary remove-row">✕</button>
-            </div>
-          </div>
-        `;
+    <input type="hidden" class="row-key" value="${makeKey("MS")}">
+    <div class="form-row">
+      <div class="form-col"><input type="text" class="ms-name" placeholder="Milestone name"></div>
+      <div class="form-col"><input type="text" class="ms-details" placeholder="Milestone details"></div>
+      <div class="form-col"><input type="text" class="ms-timeline" placeholder="Date / timeline"></div>
+      <div class="form-col"><input type="number" class="ms-billing" step="0.01" placeholder="% billing"></div>
+      <div style="width:48px; display:flex; align-items:center;">
+        <button type="button" class="btn-secondary remove-row">✕</button>
+      </div>
+    </div>
+  `;
         row.querySelector(".remove-row").addEventListener("click", function () {
           row.remove();
         });
@@ -774,17 +774,17 @@
         )
           .map(function (row) {
             return {
-              milestone_no: row.querySelector(".ms-no")?.value || "",
               milestone_name: row.querySelector(".ms-name")?.value || "",
-              planned_date: row.querySelector(".ms-planned-date")?.value || "",
+              milestone_details: row.querySelector(".ms-details")?.value || "",
+              timeline: row.querySelector(".ms-timeline")?.value || "",
               billing_percent: row.querySelector(".ms-billing")?.value || "",
             };
           })
           .filter(function (r) {
             return (
-              r.milestone_no ||
               r.milestone_name ||
-              r.planned_date ||
+              r.milestone_details ||
+              r.timeline ||
               r.billing_percent
             );
           });
@@ -796,7 +796,7 @@
         if (!payload.lead_date)
           missing.push("Date of Client's Mail/ Lead Generation");
         if (!payload.official_email) missing.push("Official Email ID");
-        if (!payload.team_name) missing.push("Team Name");
+        if (!payload.team) missing.push("Team");
         if (!payload.team_head_email) missing.push("Team Head Email ID");
         if (!payload.csuite_officer_email)
           missing.push("C-Suite Officer Email ID");
@@ -883,7 +883,7 @@
           ).value,
           official_email: document.getElementById("official_email").value,
 
-          team_name: document.getElementById("team_name").value,
+          team: document.getElementById("team").value,
           team_head_first_name: document.getElementById("team_head_first_name")
             .value,
           team_head_last_name: document.getElementById("team_head_last_name")

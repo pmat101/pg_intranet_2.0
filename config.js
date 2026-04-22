@@ -1,15 +1,5 @@
 function getDropdownData() {
   const cache = CacheService.getScriptCache();
-
-  const cached = cache.get("dropdown_data_v2");
-
-  let data;
-
-  if (cached) {
-    data = JSON.parse(cached);
-  } else {
-  }
-  const cache = CacheService.getScriptCache();
   const cached = cache.get("dropdown_data_v1");
   if (cached) return JSON.parse(cached);
   const data = {
@@ -653,7 +643,6 @@ function getDropdownData() {
       "QRA submission",
       "Other",
     ],
-
     gstTreatment: [
       "PESPL Delhi",
       "PESPL LKO",
@@ -667,6 +656,22 @@ function getDropdownData() {
       "PAWSPL Delhi",
     ],
     prMode: ["PPIP", "PPTP", "PPNP"],
+    csuite: [
+      "Praveen Bhargava",
+      "Rachna Bhargava",
+      "Dr. Nipun Bhargava",
+      "Kushal Bhargava",
+    ],
+    category: ["A", "B1", "B2", "N/A"],
+    baselineSeason: [
+      "Summer (Mar to May)",
+      "Post-monsoon (Oct to Dec)",
+      "Winter (Dec to Feb)",
+      "N/A",
+      "others",
+    ],
+    tf22ServiceTypes: ["Submission", "Closure", "Grant", "Completion", "Other"],
+    meetingType: ["ADS Reply", "Environmental Clearance", "EIA", "TOR", "Others"],
   };
   cache.put("dropdown_data_v1", JSON.stringify(data), 300); // cache 5 minutes
   return data;
