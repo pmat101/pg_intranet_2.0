@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BD-02</title>
-    <?!= HtmlService.createHtmlOutputFromFile('sharedStyles').getContent(); ?>
+    <?!= HtmlService.createHtmlOutputFromFile('shared-styles').getContent(); ?>
   </head>
   <body>
     <div class="form-wrapper">
@@ -396,7 +396,12 @@
         </div>
       </div>
 
-      <button class="btn-primary" type="button" onclick="submitBD02()">
+      <button
+        class="btn-primary"
+        type="button"
+        onclick="submitBD02()"
+        id="submitBtn"
+      >
         Submit
       </button>
     </div>
@@ -508,6 +513,17 @@
       }
 
       function submitBD02() {
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing... Please wait";
+        submitBtn.style.backgroundColor = "#8f4a3f";
+
+        setTimeout(function () {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          submitBtn.style.backgroundColor = "";
+        }, 15000);
+
         const payload = {
           leadDate: document.getElementById("lead-date").value,
           formFillerFirstName: document.getElementById("form-filler-first-name")
@@ -575,12 +591,8 @@
 
         google.script.run
           .withSuccessHandler(function (res) {
-            alert(
-              "BD02 submitted successfully\n\nProposal ID: " +
-                (res.proposal_id || payload.proposalId || "") +
-                "\nPCODE: " +
-                (res.pcode || payload.pcode || ""),
-            );
+            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
+            document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);

@@ -63,51 +63,6 @@ function genProposalIDnPCODE(payload) {
   return { proposalID, pcode };
 }
 
-function submitForm(formCode, payload) {
-  const db = getDB();
-  const sheet = db.getSheetByName("bd01a");
-  const ids = genProposalIDnPCODE(payload);
-  const proposalID = ids.proposalID;
-  const pcode = ids.pcode;
-  const row = [
-    new Date(),
-    proposalID,
-    pcode,
-    payload.leadDate,
-    payload.formFillerFirstName,
-    payload.formFillerLastName,
-    payload.officialEmail,
-    payload.customerCompany,
-    payload.customerFirstName,
-    payload.customerLastName,
-    payload.customerContact,
-    payload.customerEmail,
-    payload.isRepeatCustomer,
-    payload.activityProposed,
-    payload.village,
-    payload.taluka,
-    payload.district,
-    payload.state,
-    payload.postalCode,
-    payload.country,
-    payload.stUt,
-    payload.workType,
-    payload.sector,
-    payload.specs,
-    payload.finYear,
-    payload.pgCompany,
-    payload.customerClass,
-    payload.leadSource,
-    payload.rfq,
-    payload.remarks,
-  ]; // AppScript inserts rows using arrays. Each item becomes a column
-  sheet.appendRow(row); // Adds the row to the bottom of the sheet
-  sendFormEmail(formCode, payload);
-  return {
-    status: "success",
-  };
-}
-
 function getTeamActiveProjects(teamName) {
   const db = SpreadsheetApp.openById(
     "17K8tBcEUhaAeoM0bVZxxxMrS1q0gg-4-m64XQanpI6s",

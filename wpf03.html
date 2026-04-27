@@ -125,7 +125,12 @@
         </div>
       </div>
 
-      <button class="btn-primary" type="button" onclick="submitWPF03()">
+      <button
+        class="btn-primary"
+        type="button"
+        onclick="submitWPF03()"
+        id="submitBtn"
+      >
         Submit
       </button>
     </div>
@@ -196,6 +201,17 @@
       }
 
       function submitWPF03() {
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing... Please wait";
+        submitBtn.style.backgroundColor = "#8f4a3f";
+
+        setTimeout(function () {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          submitBtn.style.backgroundColor = "";
+        }, 15000);
+
         const payload = {
           week_start_date: document.getElementById("week_start_date").value,
           week_end_date: document.getElementById("week_end_date").value,
@@ -225,8 +241,9 @@
         if (!validateWPF03(payload)) return;
 
         google.script.run
-          .withSuccessHandler(function () {
-            window.location.search = "?page=thankyou";
+          .withSuccessHandler(function (res) {
+            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
+            document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);

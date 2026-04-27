@@ -137,56 +137,58 @@
           <textarea id="challenge"></textarea>
         </div>
         <div class="form-group">
-          <label class="form-label" for="ibottle"
-            >Internal Bottlenecks<span class="required">*</span></label
-          >
+          <label class="form-label" for="ibottle">
+            Internal Bottlenecks <span class="required">*</span>
+          </label>
+
           <select id="ibottle" required>
             <option value="none">None</option>
             <option value="ccr">CCR</option>
-            <option value="faeReport">FAE Report</option>
-            <option value="baseline">Baseline Data</option>
-            <option value="test">Test Reports</option>
+            <option value="fae_report">FAE Report</option>
+            <option value="baseline_data">Baseline Data</option>
+            <option value="test_reports">Test Reports</option>
             <option value="drawings">Drawings</option>
             <option value="maps">Maps</option>
-            <option value="other">Other</option>
+            <option value="others">Others</option>
           </select>
-          <div
-            id="ibottle-other-wrap"
-            class="form-group"
-            style="display: none; margin-top: 10px"
-          >
-            <label class="form-label" for="ibottle-other">Please specify</label>
-            <input type="text" id="ibottle-other" />
+
+          <div id="ibottle-other-wrap" style="display: none; margin-top: 10px">
+            <input
+              type="text"
+              id="ibottle-other"
+              placeholder="Please specify"
+            />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label" for="ebottle"
-            >External Bottlenecks<span class="required">*</span></label
-          >
+          <label class="form-label" for="ebottle">
+            External Bottlenecks <span class="required">*</span>
+          </label>
+
           <select id="ebottle" required>
             <option value="none">None</option>
             <option value="land_papers_missing">
               Client didn't provide land papers
             </option>
-            <option value="cover_letter_signature_missing">
+            <option value="cover_letter_signature">
               Client didn't provide signature on Cover Letter
             </option>
             <option value="nic_user_id_pending">
               Yet to receive user ID from NIC
             </option>
-            <option value="moefcc_it_issue">IT issue in MoEFCC</option>
+            <option value="moefcc_issue">IT issue in MoEFCC</option>
             <option value="ccr_pending">
-              Yet to receive Certified Compliance report from Regional office
+              Yet to receive Certified Compliance report
             </option>
-            <option value="other">Other</option>
+            <option value="others">Others</option>
           </select>
-          <div
-            id="ebottle-other-wrap"
-            class="form-group"
-            style="display: none; margin-top: 10px"
-          >
-            <label class="form-label" for="ebottle-other">Please specify</label>
-            <input type="text" id="ebottle-other" />
+
+          <div id="ebottle-other-wrap" style="display: none; margin-top: 10px">
+            <input
+              type="text"
+              id="ebottle-other"
+              placeholder="Please specify"
+            />
           </div>
         </div>
         <div class="form-group">
@@ -196,7 +198,12 @@
           <textarea id="nextWeek"></textarea>
         </div>
       </div>
-      <button class="btn-primary" type="button" onclick="submitWPF01()">
+      <button
+        class="btn-primary"
+        type="button"
+        onclick="submitWPF01()"
+        id="submitBtn"
+      >
         Submit
       </button>
     </div>
@@ -219,18 +226,6 @@
               document.getElementById("team"),
               WPF_DROPDOWNS.team,
               "Select team",
-            );
-
-            fillSelect(
-              document.getElementById("ibottle"),
-              WPF_DROPDOWNS.bottlenecks,
-              "Select",
-            );
-
-            fillSelect(
-              document.getElementById("ebottle"),
-              WPF_DROPDOWNS.bottlenecks,
-              "Select",
             );
 
             refreshDesignationDropdowns();
@@ -285,16 +280,17 @@
         const wrap = document.getElementById(wrapId);
         const input = document.getElementById(inputId);
 
-        if (!select || !wrap || !input) return;
-
         function sync() {
-          const show = /other/i.test(select.value || "");
+          const val = String(select.value || "").toLowerCase();
+          const show = val === "others";
+
           wrap.style.display = show ? "block" : "none";
+
           if (!show) input.value = "";
         }
 
         select.addEventListener("change", sync);
-        sync();
+        sync(); // ← THIS is what makes it work on load
       }
 
       function getSelectValueOrOther(selectId, otherInputId) {
@@ -347,9 +343,11 @@
       function bindWPFEvents() {
         document.getElementById("team").addEventListener("change", function () {
           loadActiveProjectsForTeam(this.value);
-          toggleOtherBlock("ibottle", "ibottle-other-wrap", "ibottle-other");
-          toggleOtherBlock("ebottle", "ebottle-other-wrap", "ebottle-other");
         });
+
+        // Bind these once on load, not only after team changes
+        toggleOtherBlock("ibottle", "ibottle-other-wrap", "ibottle-other");
+        toggleOtherBlock("ebottle", "ebottle-other-wrap", "ebottle-other");
 
         document
           .querySelectorAll('input[name="tf-filled"]')
@@ -1041,6 +1039,17 @@
       }
 
       function submitWPF01() {
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing... Please wait";
+        submitBtn.style.backgroundColor = "#8f4a3f";
+
+        setTimeout(function () {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          submitBtn.style.backgroundColor = "";
+        }, 15000);
+
         const payload = {
           week_start: document.getElementById("start-date").value,
           week_end: document.getElementById("end-date").value,
@@ -1088,8 +1097,7 @@
         google.script.run
           .withSuccessHandler(function (res) {
             console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
-            document.body.innerHTML =
-              "<h1>Thank You, your response has been submitted</h1>";
+            document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             console.error("ERROR:", err); // 👈 important

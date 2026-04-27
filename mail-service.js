@@ -1,49 +1,3 @@
-function sendFormEmail(formCode, payload, submissionId) {
-  const recipients = "pranav.mathur@perfactgroup.in";
-  const subject = formCode + " submitted - " + submissionId;
-  const body = buildEmailBody(formCode, payload, submissionId);
-
-  GmailApp.sendEmail(recipients, subject, body);
-}
-
-function buildEmailBody(formCode, payload, submissionId) {
-  const nl = "\n";
-
-  let body = "";
-  body += "Dear Team," + nl + nl;
-  body += "WPF01 has been submitted." + nl + nl;
-
-  body += "Submission ID: " + submissionId + nl;
-  body += "Team: " + payload.team_name + nl;
-  body += "Week: " + payload.week_start + " to " + payload.week_end + nl;
-  body += "TF Filled: " + payload.tf_filled + nl;
-  body += "Milestone Achieved: " + payload.milestone_achieved + nl;
-  body += "Total Working Hours: " + payload.total_working_hours + nl;
-
-  body += nl + "---------------- TF DETAILS ----------------" + nl;
-
-  payload.tf_details.forEach((r, i) => {
-    body +=
-      `${i + 1}. ${r.tf_name} | Planned: ${r.planned_last_week} | Achieved: ${r.achieving_this_week} | Next: ${r.plan_for_next_week}` +
-      nl;
-  });
-
-  body += nl + "---------------- TEAM WORK ----------------" + nl;
-
-  payload.weekly_team_details.forEach((r, i) => {
-    body +=
-      `${i + 1}. ${r.name} | ${r.project_name} | ${r.pcode} | ${r.time_spent} hrs | ${r.status}` +
-      nl;
-  });
-
-  body += nl + "Targets Planned:" + nl + payload.targets_planned_this_week + nl;
-  body +=
-    nl + "Targets Achieved:" + nl + payload.targets_achieved_this_week + nl;
-  body += nl + "Highlights:" + nl + payload.highlights + nl;
-
-  return body;
-}
-
 function sendWPF01Email(payload, submissionId) {
   const to = "priority.wg@perfactgroup.in, gov.council@perfactgroup.in";
   const cc = buildTeamCc(payload.team_name) + ", pranav.mathur@perfactgroup.in";
@@ -67,6 +21,7 @@ function sendWPF01Email(payload, submissionId) {
 
 function buildTeamCc(teamName) {
   const safe = String(teamName || "")
+    .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "");
   return safe ? safe + "@perfactgroup.in" : "";
@@ -435,7 +390,7 @@ function buildBD03EmailHtml(payload, submissionId) {
       `${payload.form_filler_first_name || ""} ${payload.form_filler_last_name || ""}`.trim(),
     ),
     row("Official Email", payload.official_email || ""),
-    row("Team Name", payload.team_name || ""),
+    row("Team Name", payload.team || ""),
     row(
       "Team Head",
       `${payload.team_head_first_name || ""} ${payload.team_head_last_name || ""}`.trim(),
@@ -515,8 +470,8 @@ function buildBD03EmailHtml(payload, submissionId) {
 
   return `
     <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
-      <p>Dear ${payload.formFillerFirstName || ""} ${payload.formFillerLastName || ""},</p>
-      <p>New Project with PCode ${payload.pcode || ""} of ${payload.project_name || ""} has been won and assigned to ${payload.team_name || ""} </p>
+      <p>Dear ${payload.form_filler_first_name || ""} ${payload.form_filler_last_name || ""},</p>
+      <p>New Project ${payload.project_name || ""} with PCode ${payload.pcode || ""} has been won and assigned to ${payload.team || ""} </p>
 
       ${section("Main Details", mainRows)}
       ${section("Any other person whom details to be shared", otherPersonsRows || row("1", "No additional persons added"))}
@@ -549,8 +504,8 @@ function buildBD03EmailHtml(payload, submissionId) {
 
 function sendTF02Email(p, submissionId) {
   const to = `${p.employee_email}`;
-  const ccList = `info@perfactgroup.in, teameia@perfactgroup.in, ${p.eia_coordinator_name}@perfactgroup.in, ${buildTeamCc(payload.team_name)}`;
-  const subject = `Submission on appraisal meeting dated- ${p.meeting_date || ""} completion of Project- ${p.project_name || ""} for ${p.meeting_type || ""} -meeting at Agenda no. ${p.agenda_number || ""} in committee- ${p.committee_name || ""}`;
+  const ccList = `info@perfactgroup.in, teameia@perfactgroup.in, ${p.eia_coordinator_email}, ${buildTeamCc(p.team_name)}`;
+  const subject = `Submission on appraisal meeting dated- ${p.meeting_date || ""} completion of Project- ${truncate(p.project_name, 42)} for ${p.meeting_type || ""} -meeting at Agenda no. ${p.agenda_number || ""} in committee- ${p.committee_name || ""}`;
   const htmlBody = buildTF02EmailHtml(p, submissionId);
 
   GmailApp.sendEmail(to, subject, "HTML email required", {
@@ -583,55 +538,88 @@ function buildTF02EmailHtml(p, submissionId) {
     `;
   }
 
-  const summaryRows = [
-    // row("Submission ID", submissionId),
-    row("Date", p.date || ""),
-    row("Employee Email", p.employee_email || ""),
-    row("Team Name", p.team_name || ""),
-    row("EIA Coordinator", p.eia_coordinator_name || ""),
-    row("Committee", p.committee_name || ""),
-    row("Agenda Number", p.agenda_number || ""),
-    row("Project Name", p.project_name || ""),
-    row("PCode", p.pcode || ""),
-    row("Date of Meeting", p.meeting_date || ""),
-    row("Time of Meeting", p.meeting_time || ""),
-    row("Meeting Recording Link", p.meeting_recording_link || ""),
-    row("Final Presentation Link", p.final_presentation_link || ""),
+  const basicRows = [
+    row("Date", p.date),
+    row("Employee Name", `${p.first_name || ""} ${p.last_name || ""}`),
+    row("Employee Email", p.employee_email),
+    row("Team", p.team_name),
+    row("EIA Coordinator", p.eia_coordinator_name),
+    row("QCC Reviewers", p.qcc_reviewers),
   ].join("");
 
-  const otherText = [
-    row("Type of Meeting", p.meeting_type || ""),
-    row("Type of Meeting - Other", p.meeting_type_other || ""),
-    row("Case Recommended", p.case_recommended || ""),
-    row("Case Recommended - Other", p.case_recommended_other || ""),
+  const projectRows = [
+    row("Project Name", p.project_name),
+    row("Project Code", p.pcode),
+    row("Proposal Number", p.proposal_number),
+    row("Committee", p.committee_name),
+    row("Agenda Number", p.agenda_number),
+    row("Case Type", p.case_type),
+  ].join("");
+
+  const meetingRows = [
+    row(
+      "Meeting Type",
+      p.meeting_type === "Others" ? p.meeting_type_other : p.meeting_type,
+    ),
+    row("Meeting Date", p.meeting_date),
+    row("Meeting Time", p.meeting_time),
+    row("Perfact Officials", p.perfact_officials),
+    row("Project Proponent", p.project_proponent),
+    row(
+      "Presenter",
+      `${p.presenter_first_name || ""} ${p.presenter_last_name || ""}`,
+    ),
+  ].join("");
+
+  const costRows = [
+    row("Proposed Project Cost", p.proposed_project_cost),
+    row("Existing Project Cost", p.existing_project_cost),
+  ].join("");
+
+  const analysisRows = [
+    row("Key Points & Queries", p.key_points_queries),
+    row("EAC Future Focus", p.eac_future_focus),
+    row("FAE Suggestions", p.fae_suggestions),
+    row("PPT Changes", p.ppt_changes),
+    row("Immediate Actions", p.immediate_actions),
+    row("Post Submittal Points", p.post_submittal_points),
+    row("Key Learnings", p.key_learnings),
+    row("Struggles & Reason", p.struggles_and_reason),
+    row("Future Implications", p.future_implications),
+  ].join("");
+
+  const decisionRows = [
+    row(
+      "Case Recommended",
+      p.case_recommended === "Others"
+        ? p.case_recommended_other
+        : p.case_recommended,
+    ),
+    row("Warning Signs", p.warning_signs),
+    row("Action Points", p.action_points),
+  ].join("");
+
+  const linksRows = [
+    row("Meeting Recording", p.meeting_recording_link),
+    row("Final Presentation", p.final_presentation_link),
   ].join("");
 
   return `
     <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
-      <p>Dear Team,</p>
-      <p>TF02 has been submitted successfully.</p>
+      <p>Dear all,</p>
+      <p>Submission on appraisal meeting dated- ${p.meeting_date || ""} completion of Project- ${p.project_name} for ${p.meeting_type || ""} -meeting at Agenda no. ${p.agenda_number || ""} in committee- ${p.committee_name || ""}</p>
 
-      ${section("Submission Summary", summaryRows)}
-      ${section("Meeting / Recommendation", otherText)}
-
-      <div style="margin-top:18px;">
-        <div style="font-weight:700;margin-bottom:8px;">QCC Reviewers</div>
-        <div style="border:1px solid #ccc;padding:8px;white-space:pre-wrap;">${esc(p.qcc_reviewers || "")}</div>
-      </div>
-
-      <div style="margin-top:18px;">
-        <div style="font-weight:700;margin-bottom:8px;">Key Points & Queries Raised by EAC</div>
-        <div style="border:1px solid #ccc;padding:8px;white-space:pre-wrap;">${esc(p.key_points_queries || "")}</div>
-      </div>
+      ${section("Basic Details", basicRows)}
+      ${section("Project Details", projectRows)}
+      ${section("Meeting Details", meetingRows)}
+      ${section("Project Cost", costRows)}
+      ${section("Technical Analysis", analysisRows)}
+      ${section("Decision & Risk", decisionRows)}
+      ${section("Links", linksRows)}
 
       <div style="margin-top:18px;">
-        <div style="font-weight:700;margin-bottom:8px;">Immediate Actions Required</div>
-        <div style="border:1px solid #ccc;padding:8px;white-space:pre-wrap;">${esc(p.immediate_actions || "")}</div>
-      </div>
-
-      <div style="margin-top:18px;">
-        <div style="font-weight:700;margin-bottom:8px;">Warning Signs</div>
-        <div style="border:1px solid #ccc;padding:8px;white-space:pre-wrap;">${esc(p.warning_signs || "")}</div>
+        <div style="font-weight:700;margin-bottom:8px;">Remarks</div>
+        <div style="border:1px solid #ccc;padding:8px;">${esc(p.remarks)}</div>
       </div>
 
       <p style="margin-top:18px;">Regards,<br/>TF02</p>
@@ -721,7 +709,7 @@ function buildWPF03EmailHtml(payload, submissionId) {
 
 function sendTF01Email(payload, submissionId) {
   const to = payload.employee_email;
-  const cc = `logistics.wg@perfactgroup.in, top.management@perfactgroup.in, ${buildTeamCc(payload.team_name)}`;
+  const cc = `logistics.wg@perfactgroup.in, topmanagement@perfactgroup.in, ${buildTeamCc(payload.team_name)}`;
   const subject = `Requisition slip printing`;
   const htmlBody = buildTF01EmailHtml(payload, submissionId);
 
@@ -800,104 +788,52 @@ function buildTF01EmailHtml(payload, submissionId) {
 }
 
 function sendBD03Email(payload, submissionId) {
-  const recipients = buildBD03Recipients(payload);
-  const ccList = buildBD03CcList(payload);
-
-  const subject =
-    "BD03 | " + (payload.project_name || "") + " | " + (payload.team || "");
-
-  const htmlBody = buildBD03EmailHtml(payload, submissionId);
-
-  GmailApp.sendEmail(recipients.to, subject, "HTML email required", {
-    htmlBody: htmlBody,
-    name: "BD03",
-    cc: ccList.join(","),
-  });
-}
-
-function buildBD03Recipients(payload) {
-  const submitter = String(payload.official_email || "").trim();
-  const teamName = String(payload.team || "").trim();
-
-  // Replace this with your real Glacier team mailbox.
-  const teamMailboxByName = {
-    Glacier: "glacier@perfactgroup.in",
-  };
-
-  const teamMailbox = teamMailboxByName[teamName] || "";
-
-  return {
-    to: dedupeEmails([teamMailbox, submitter]),
-  };
-}
-
-function buildBD03CcList(payload) {
-  const staticCc = [
+  const recipients = `glacier@perfactgroup.in, ${payload.official_email}, ${buildTeamCc(payload.team)}`;
+  const otherEmails = (payload.other_persons || [])
+    .map((p) => p.email)
+    .filter((e) => e)
+    .join(",");
+  const ccList = [
     payload.csuite_officer_email,
     payload.eia_coordinator_email,
     "topmanagement@perfactgroup.in",
     "accounts@perfactgroup.in",
     "info@perfactgroup.in",
     payload.team_head_email,
-  ];
+    otherEmails,
+  ]
+    .filter(Boolean)
+    .join(",");
+  const subject = `New Project ${truncate(payload.project_name, 84)} with PCode ${payload.pcode || ""} has been won and assigned to ${payload.team || ""}`;
+  const htmlBody = buildBD03EmailHtml(payload, submissionId);
 
-  const otherPeople = Array.isArray(payload.other_persons)
-    ? payload.other_persons.map(function (p) {
-        return p && p.email ? p.email : "";
-      })
-    : [];
-
-  return dedupeEmails(staticCc.concat(otherPeople));
+  GmailApp.sendEmail(recipients, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "BD03",
+    cc: ccList,
+  });
 }
 
-function dedupeEmails(list) {
-  const seen = {};
-  return list
-    .map(function (x) {
-      return String(x || "").trim();
-    })
-    .filter(function (email) {
-      if (!email) return false;
-      const key = email.toLowerCase();
-      if (seen[key]) return false;
-      seen[key] = true;
-      return true;
-    });
+function truncate(text, maxLength) {
+  text = String(text || "");
+  return text.length > maxLength
+    ? text.substring(0, maxLength).trim() + "..."
+    : text;
 }
 
 function sendTF22Email(payload, submissionId) {
-  const toList = dedupeEmails([
-    payload.employee_email,
-    getTeamMailbox(payload.team_name),
-  ]);
+  const toList = `${payload.employee_email}, ${buildTeamCc(payload.team_name)}`;
+  const ccList =
+    "info@perfactgroup.in, accounts@perfactgroup.in, glacier@perfactgroup.in";
 
-  const ccList = dedupeEmails([
-    "info@perfactgroup.in",
-    "accounts@perfactgroup.in",
-    "glacier@perfactgroup.in",
-  ]);
-
-  const subject = `TF22 | ${payload.project_name || ""} | ${payload.team_name || ""}`;
+  const subject = `Accounts info wrt submission/ completion of project for ${payload.type_of_work} of Project- ${truncate(payload.project_name, 42)} with PCode- ${payload.project_code} and Service Type- ${payload.type_of_service}`;
   const htmlBody = buildTF22EmailHtml(payload, submissionId);
 
-  GmailApp.sendEmail(
-    toList[0] || payload.employee_email,
-    subject,
-    "HTML email required",
-    {
-      htmlBody: htmlBody,
-      name: "TF22",
-      cc: ccList.join(","),
-    },
-  );
-}
-
-function getTeamMailbox(teamName) {
-  const team = String(teamName || "")
-    .trim()
-    .toLowerCase();
-  if (!team) return "";
-  return team.replace(/[^a-z0-9]+/g, "") + "@perfactgroup.in";
+  GmailApp.sendEmail(toList, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF22",
+    cc: ccList,
+  });
 }
 
 function buildTF22EmailHtml(payload, submissionId) {
@@ -914,8 +850,8 @@ function buildTF22EmailHtml(payload, submissionId) {
 
   return `
     <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
-      <p>Dear Team,</p>
-      <p>TF22 has been submitted successfully.</p>
+      <p>Dear ${payload.employee_first_name || ""} ${payload.employee_last_name || ""},</p>
+      <p>Account section wrt submission/ completion of project for  ${payload.type_of_work} of Project- ${payload.project_name} with PCode- ${payload.project_code} and Service Type- ${payload.type_of_service} has been submitted and sent for review.</p>
 
       <table style="border-collapse:collapse;width:100%;font-size:13px;">
         <tbody>
@@ -934,6 +870,239 @@ function buildTF22EmailHtml(payload, submissionId) {
       </table>
 
       <p style="margin-top:18px;">Regards,<br/>TF22</p>
+    </div>
+  `;
+}
+
+function sendTF07Email(payload, submissionId) {
+  const to = [payload.employee_email, payload.email_of_person_to_bill]
+    .filter(Boolean)
+    .join(",");
+
+  const cc = ["info@perfactgroup.in", buildTeamCc(payload.team_name)]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `TF07 | ${payload.project_name || ""} | ${payload.project_code || ""}`;
+  const htmlBody = buildTF07EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF07",
+    cc: cc,
+  });
+}
+
+function buildTF07EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const basicRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Employee Name",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
+    ),
+    row("Employee Email", payload.employee_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("Project Code", payload.project_code || ""),
+  ].join("");
+
+  const workRows = [
+    row(
+      "Type of Work",
+      payload.type_of_work === "Other"
+        ? payload.type_of_work_other
+        : payload.type_of_work,
+    ),
+    row(
+      "Milestone Achieved",
+      payload.milestone_achieved === "Other"
+        ? payload.milestone_achieved_other
+        : payload.milestone_achieved,
+    ),
+    row("Date of Milestone Achieved", payload.date_of_milestone_achieved || ""),
+    row("Proof Link", payload.proof_link || ""),
+    row("Submission Status", payload.submission_status || ""),
+  ].join("");
+
+  const billRows = [
+    row("Person to Bill", payload.person_to_bill || ""),
+    row("Email ID of Person to Bill", payload.email_of_person_to_bill || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>TF07 has been submitted successfully.</p>
+
+      ${section("Basic Details", basicRows)}
+      ${section("Work Details", workRows)}
+      ${section("Billing Details", billRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF07</p>
+    </div>
+  `;
+}
+
+function sendTF05Email(payload, submissionId) {
+  const to = payload.official_email;
+  const cc = `info@perfactgroup.in, topmanagement@perfactgroup.in, vc@perfactgroup.in, paromita.das@perfactgroup.in, ${payload.eia_coordinator_email || ""}, ${buildTeamCc(payload.team_name)}`;
+
+  const subject = `Your Format for Handover PPT_EAC Meeting response dated ${payload.date || ""} for ${payload.developer_company_name}, Project ${truncate(payload.project_name || "", 42)} with PCODE- ${payload.project_code || ""} at ${payload.project_location || ""} in ${payload.eac_committee || ""} has been submitted and sent for review`;
+  const htmlBody = buildTF05EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF05",
+    cc: cc,
+  });
+}
+
+function buildTF05EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const basicRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Requestor",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Official Email", payload.official_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("EIA Coordinator", payload.eia_coordinator_name || ""),
+    row("QCC Reviewers", payload.qcc_reviewers || ""),
+  ].join("");
+
+  const projectRows = [
+    row("Developer Company Name", payload.developer_company_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row(
+      "Project Proponent",
+      `${payload.project_proponent_first_name || ""} ${payload.project_proponent_last_name || ""}`.trim(),
+    ),
+    row("Project Code", payload.project_code || ""),
+    row(
+      "Proposed Project Cost (in lacs)",
+      payload.proposed_project_cost_lacs || "",
+    ),
+    row(
+      "Existing Project Cost (in lacs)",
+      payload.existing_project_cost_lacs || "",
+    ),
+    row(
+      "Project Cost after getting proposed EC (in lacs)",
+      payload.project_cost_after_proposed_ec_lacs || "",
+    ),
+    row("Project Location", payload.project_location || ""),
+    row("Plot Area", payload.plot_area_sq_m || ""),
+    row("Built up Area", payload.built_up_area_sq_m || ""),
+    row("Capacity", payload.capacity || ""),
+    row("EMP Cost (Capital)", payload.emp_cost_capital_lacs || ""),
+    row("Category", payload.category || ""),
+    row("Activity", payload.activity || ""),
+    row("Parivesh Login ID", payload.parivesh_login_id || ""),
+    row("Parivesh Password", payload.parivesh_password || ""),
+  ].join("");
+
+  const meetingRows = [
+    row(
+      "Type of Presentation",
+      payload.type_of_presentation === "Other"
+        ? `${payload.type_of_presentation} | ${payload.type_of_presentation_other || ""}`
+        : payload.type_of_presentation || "",
+    ),
+    row("EAC Committee", payload.eac_committee || ""),
+    row("Proposal No.", payload.proposal_no || ""),
+    row("Date of uploading", payload.date_of_uploading || ""),
+    row("Agenda No.", payload.agenda_no || ""),
+    row("Date of EAC meeting", payload.date_of_eac_meeting || ""),
+    row("Internal Meeting Link", payload.internal_meeting_link || ""),
+    row("EAC Meeting Link", payload.eac_meeting_link || ""),
+    row("Meeting S.No.", payload.meeting_s_no || ""),
+    row("Master PPT Link", payload.master_ppt_link || ""),
+    row("Summarised PPT Link", payload.summarised_ppt_link || ""),
+  ].join("");
+
+  const docRows = [
+    row(
+      "Brief Writeup (Annexure as per Agenda)",
+      payload.brief_writeup_annexure || "",
+    ),
+    row(
+      "Uploading Document - Single File Link",
+      payload.uploading_document_single_file_link || "",
+    ),
+    row("Online Report Link", payload.online_report_link || ""),
+    row("Undertaking Link", payload.undertaking_link || ""),
+    row("KML File Link", payload.kml_file_link || ""),
+    row("Backup folder Link", payload.backup_folder_link || ""),
+    row(
+      "Circulation Documents Link- in Docx",
+      payload.circulation_documents_link_docx || "",
+    ),
+    row(
+      "Circulation Documents- in PDF",
+      payload.circulation_documents_pdf || "",
+    ),
+    row("Critical Points", payload.critical_points || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${payload.requestor_first_name} ${payload.requestor_last_name || ""},</p>
+      <p>Your Format for Handover PPT_EAC Meeting response dated ${payload.date || ""} has been submitted successfully</p>
+
+      ${section("Basic Details", basicRows)}
+      ${section("Project Details", projectRows)}
+      ${section("Meeting / Presentation", meetingRows)}
+      ${section("Documents / Links", docRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF05</p>
     </div>
   `;
 }

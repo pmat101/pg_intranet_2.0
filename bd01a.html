@@ -8,7 +8,7 @@
     <?!= HtmlService.createHtmlOutputFromFile('shared-styles').getContent(); ?>
   </head>
   <body>
-    <div class="form-wrapper" onload="populateDropdowns()">
+    <div class="form-wrapper">
       <div class="form-title">BD-01(A)</div>
       <div class="form-subtitle">
         To be filled by BD Team before offer is sent
@@ -77,9 +77,9 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="customer-contact"
-            >Customer Contact Number <span class="required">*</span></label
+            >Customer Contact Number </span></label
           >
-          <input type="tel" id="customer-contact" required />
+          <input type="tel" id="customer-contact" />
         </div>
         <div class="form-group">
           <label class="form-label" for="customer-email">
@@ -240,7 +240,12 @@
           <textarea id="remarks"></textarea>
         </div>
       </div>
-      <button class="btn-primary" type="button" onclick="submitBD01A()">
+      <button
+        class="btn-primary"
+        type="button"
+        onclick="submitBD01A()"
+        id="submitBtn"
+      >
         Submit
       </button>
     </div>
@@ -361,6 +366,17 @@
       }
 
       function submitBD01A() {
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing... Please wait";
+        submitBtn.style.backgroundColor = "#8f4a3f";
+
+        setTimeout(function () {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          submitBtn.style.backgroundColor = "";
+        }, 15000);
+
         const payload = {
           leadDate: document.getElementById("lead-date").value,
           formFillerFirstName: document.getElementById("form-filler-first-name")
@@ -409,8 +425,7 @@
                 "PCODE: " +
                 res.pcode,
             );
-            document.body.innerHTML =
-              "<h1>Thank You, your response has been submitted</h1>";
+            document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);

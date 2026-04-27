@@ -235,7 +235,11 @@
             >Suggestions on FAE Reports <span class="required">*</span></label
           >
           <textarea id="fae_suggestions"></textarea>
-          <div class="helper-text">Document any suggestions in FAE reports if any (format, content, data quality or methodology) made by the EAC, the Project Proponent or the technical reviewers
+          <div class="helper-text">
+            Document any suggestions in FAE reports if any (format, content,
+            data quality or methodology) made by the EAC, the Project Proponent
+            or the technical reviewers
+          </div>
         </div>
 
         <div class="form-group">
@@ -243,7 +247,11 @@
             >Change in PPT Format <span class="required">*</span></label
           >
           <textarea id="ppt_changes"></textarea>
-          <div class="helper-text">Document any change in PPT format (structural, content or visual) that was suggested or mandated by the EAC for this case or for future presentations.</div>
+          <div class="helper-text">
+            Document any change in PPT format (structural, content or visual)
+            that was suggested or mandated by the EAC for this case or for
+            future presentations.
+          </div>
         </div>
 
         <div class="form-group">
@@ -251,7 +259,11 @@
             >Immediate Actions Required <span class="required">*</span></label
           >
           <textarea id="immediate_actions"></textarea>
-          <div class="helper-text">Outline the specific, prioritised reply/submittal actions needed immediately. Include the responsible team/person and the internal/external deadline.</div>
+          <div class="helper-text">
+            Outline the specific, prioritised reply/submittal actions needed
+            immediately. Include the responsible team/person and the
+            internal/external deadline.
+          </div>
         </div>
 
         <div class="form-group">
@@ -260,7 +272,12 @@
             <span class="required">*</span></label
           >
           <textarea id="post_submittal_points"></textarea>
-          <div class="helper-text">Note all follow-up actions, coordination requirements or documentation steps necessary after the primary reply is submitted (e.g., site visits, public hearing follow-ups, data validation checks or final document archiving)</div>
+          <div class="helper-text">
+            Note all follow-up actions, coordination requirements or
+            documentation steps necessary after the primary reply is submitted
+            (e.g., site visits, public hearing follow-ups, data validation
+            checks or final document archiving)
+          </div>
         </div>
 
         <div class="form-group">
@@ -269,7 +286,11 @@
             <span class="required">*</span></label
           >
           <textarea id="key_learnings"></textarea>
-          <div class="helper-text">Capture critical, actionable insights and learnings for the team and FAEs etc. specific to the preparation and the meeting itself. Focus on improving future work</div>
+          <div class="helper-text">
+            Capture critical, actionable insights and learnings for the team and
+            FAEs etc. specific to the preparation and the meeting itself. Focus
+            on improving future work
+          </div>
         </div>
 
         <div class="form-group">
@@ -278,7 +299,10 @@
             <span class="required">*</span></label
           >
           <textarea id="struggles_and_reason"></textarea>
-          <div class="helper-text">Detail which points we struggled in the meeting and reason. Be specific and honest to drive systemic change.</div>
+          <div class="helper-text">
+            Detail which points we struggled in the meeting and reason. Be
+            specific and honest to drive systemic change.
+          </div>
         </div>
 
         <div class="form-group">
@@ -287,7 +311,12 @@
             <span class="required">*</span></label
           >
           <textarea id="future_implications"></textarea>
-          <div class="helper-text">Based on the EAC feedback and internal struggles, identify what future projects to consider for strategy. Mandatory changes or best practices that must be implemented starting from the inception stage of future, similar EIA projects</div>
+          <div class="helper-text">
+            Based on the EAC feedback and internal struggles, identify what
+            future projects to consider for strategy. Mandatory changes or best
+            practices that must be implemented starting from the inception stage
+            of future, similar EIA projects
+          </div>
         </div>
 
         <div class="form-group">
@@ -308,7 +337,11 @@
           <label class="form-label" for="case_recommended"
             >Case Recommended <span class="required">*</span></label
           >
-          <select id="case_recommended" required></select>
+          <select id="case_recommended" required>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+            <option value="other">Others</option>
+          </select>
           <div
             id="case_recommended_other_wrap"
             style="display: none; margin-top: 10px"
@@ -320,13 +353,16 @@
             />
           </div>
         </div>
-
         <div class="form-group">
           <label class="form-label" for="warning_signs"
             >Warning Signs <span class="required">*</span></label
           >
           <textarea id="warning_signs"></textarea>
-          <div class="helper-text">Explicitly document any critical, non-negotiable issues or red flags raised by the EAC that may affect the final recommendation or future EC compliance.</div>
+          <div class="helper-text">
+            Explicitly document any critical, non-negotiable issues or red flags
+            raised by the EAC that may affect the final recommendation or future
+            EC compliance.
+          </div>
         </div>
 
         <div class="form-group">
@@ -356,7 +392,12 @@
         </div>
       </div>
 
-      <button class="btn-primary" type="button" onclick="submitTF02()">
+      <button
+        class="btn-primary"
+        type="button"
+        onclick="submitTF02()"
+        id="submitBtn"
+      >
         Submit
       </button>
     </div>
@@ -387,11 +428,6 @@
               "Select",
             );
             fillSelect(
-              document.getElementById("case_recommended"),
-              data.tf02CaseRecommended || [],
-              "Select",
-            );
-            fillSelect(
               document.getElementById("time_hours"),
               Array.from({ length: 12 }, (_, i) =>
                 String(i + 1).padStart(2, "0"),
@@ -408,7 +444,7 @@
               ["AM", "PM"],
               "AM / PM",
             );
-            renderQccReviewers(data.tf02QccReviewers || []);
+            renderQccReviewers(data.qccReviewer || []);
           })
           .getDropdownData();
       }
@@ -548,6 +584,17 @@
       }
 
       function submitTF02() {
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing... Please wait";
+        submitBtn.style.backgroundColor = "#8f4a3f";
+
+        setTimeout(function () {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          submitBtn.style.backgroundColor = "";
+        }, 15000);
+
         const payload = {
           date: document.getElementById("date").value,
           first_name: document.getElementById("first_name").value,
@@ -622,8 +669,9 @@
         if (!validateTF02(payload)) return;
 
         google.script.run
-          .withSuccessHandler(function () {
-            window.location.search = "?page=thankyou";
+          .withSuccessHandler(function (res) {
+            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
+            document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);

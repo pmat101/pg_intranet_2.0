@@ -500,7 +500,12 @@
         </div>
       </div>
 
-      <button class="btn-primary" type="button" onclick="submitBD03()">
+      <button
+        class="btn-primary"
+        type="button"
+        onclick="submitBD03()"
+        id="submitBtn"
+      >
         Submit
       </button>
     </div>
@@ -873,6 +878,17 @@
       }
 
       function submitBD03() {
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing... Please wait";
+        submitBtn.style.backgroundColor = "#8f4a3f";
+
+        setTimeout(function () {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          submitBtn.style.backgroundColor = "";
+        }, 15000);
+
         const payload = {
           lead_date: document.getElementById("lead_date").value,
           form_filler_first_name: document.getElementById(
@@ -1003,7 +1019,8 @@
 
         google.script.run
           .withSuccessHandler(function (res) {
-            window.location.search = "?page=thankyou";
+            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
+            document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);

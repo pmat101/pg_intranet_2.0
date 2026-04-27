@@ -1,47 +1,43 @@
 function submitWPF01(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(500);
+  const db = getDB();
+  const now = new Date();
+  const createdBy = Session.getActiveUser().getEmail() || "";
+  const submissionId = Utilities.getUuid();
 
-  try {
-    const db = getDB();
-    const now = new Date();
-    const createdBy = Session.getActiveUser().getEmail() || "";
-    const submissionId = Utilities.getUuid();
+  payload = payload || {};
+  payload.submission_id = submissionId;
 
-    payload = payload || {};
-    payload.submission_id = submissionId;
+  validateWPF01Server(payload);
 
-    validateWPF01Server(payload);
+  writeWPF01Main(db, payload, submissionId, createdBy, now);
+  writeWPF01Lines(db, payload, submissionId, createdBy, now);
 
-    writeWPF01Main(db, payload, submissionId, createdBy, now);
-    writeWPF01Lines(db, payload, submissionId, createdBy, now);
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "WPF01",
+    pcode: firstPcodeFromWPF(payload),
+    createdBy: createdBy,
+    now: now,
+    payload: payload,
+  });
 
-    appendSubmissionLedger(db, {
-      submissionId: submissionId,
-      formCode: "WPF01",
-      pcode: firstPcodeFromWPF(payload),
-      createdBy: createdBy,
-      now: now,
-      payload: payload,
-    });
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "WPF01",
+    createdBy: createdBy,
+    now: now,
+    payload: payload,
+  });
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "WPF01",
-      createdBy: createdBy,
-      now: now,
-      payload: payload,
-    });
+  sendWPF01Email(payload, submissionId);
 
-    sendWPF01Email(payload, submissionId);
-
-    return {
-      ok: true,
-      submission_id: submissionId,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
 }
 
 function validateWPF01Server(payload) {
@@ -284,58 +280,54 @@ function firstPcodeFromWPF(payload) {
 }
 
 function submitBD01A(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const db = getDB();
+  const sheet = db.getSheetByName("bd01a");
+  if (!sheet) throw new Error("Missing sheet: bd01a");
 
-  try {
-    const db = getDB();
-    const sheet = db.getSheetByName("bd01a");
-    if (!sheet) throw new Error("Missing sheet: bd01a");
+  payload = payload || {};
 
-    payload = payload || {};
+  validateBD01AServer(payload);
 
-    validateBD01AServer(payload);
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+  const ids = genProposalIDnPCODE(payload);
+  const proposalID = ids.proposalID;
+  const pcode = ids.pcode;
 
-    const now = new Date();
-    const submissionId = Utilities.getUuid();
-    const ids = genProposalIDnPCODE(payload);
-    const proposalID = ids.proposalID;
-    const pcode = ids.pcode;
+  payload.submission_id = submissionId;
+  payload.proposal_id = proposalID;
+  payload.pcode = pcode;
 
-    payload.submission_id = submissionId;
-    payload.proposal_id = proposalID;
-    payload.pcode = pcode;
+  appendBD01ARow(sheet, payload, submissionId, proposalID, pcode, now);
 
-    appendBD01ARow(sheet, payload, submissionId, proposalID, pcode, now);
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "BD01A",
+    pcode: pcode,
+    createdBy: payload.officialEmail || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendSubmissionLedger(db, {
-      submissionId: submissionId,
-      formCode: "BD01A",
-      pcode: pcode,
-      createdBy: payload.officialEmail || "",
-      now: now,
-      payload: payload,
-    });
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "BD01A",
+    createdBy: payload.officialEmail || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "BD01A",
-      createdBy: payload.officialEmail || "",
-      now: now,
-      payload: payload,
-    });
+  sendBD01AEmail(payload, submissionId, proposalID, pcode);
 
-    sendBD01AEmail(payload, submissionId, proposalID, pcode);
-
-    return {
-      ok: true,
-      submission_id: submissionId,
-      proposalID: proposalID,
-      pcode: pcode,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return {
+    ok: true,
+    submission_id: submissionId,
+    proposalID: proposalID,
+    pcode: pcode,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
 }
 
 function validateBD01AServer(payload) {
@@ -415,50 +407,46 @@ function appendBD01ARow(sheet, payload, submissionId, proposalID, pcode, now) {
 }
 
 function submitBD02(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const db = getDB();
+  const sheet = db.getSheetByName("BD02");
+  if (!sheet) throw new Error("Missing sheet: BD02");
 
-  try {
-    const db = getDB();
-    const sheet = db.getSheetByName("BD02");
-    if (!sheet) throw new Error("Missing sheet: BD02");
+  payload = payload || {};
+  validateBD02Server(payload);
 
-    payload = payload || {};
-    validateBD02Server(payload);
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
 
-    const now = new Date();
-    const submissionId = Utilities.getUuid();
+  payload.submission_id = submissionId;
 
-    payload.submission_id = submissionId;
+  appendBD02Row(sheet, payload, submissionId, now);
 
-    appendBD02Row(sheet, payload, submissionId, now);
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "BD02",
+    pcode: payload.pcode || "",
+    createdBy: payload.officialEmail || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendSubmissionLedger(db, {
-      submissionId: submissionId,
-      formCode: "BD02",
-      pcode: payload.pcode || "",
-      createdBy: payload.officialEmail || "",
-      now: now,
-      payload: payload,
-    });
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "BD02",
+    createdBy: payload.officialEmail || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "BD02",
-      createdBy: payload.officialEmail || "",
-      now: now,
-      payload: payload,
-    });
+  sendBD02Email(payload, submissionId);
 
-    sendBD02Email(payload, submissionId);
-
-    return {
-      ok: true,
-      submission_id: submissionId,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
 }
 
 function validateBD02Server(payload) {
@@ -565,81 +553,77 @@ function appendBD02Row(sheet, payload, submissionId, now) {
 }
 
 function submitBD03(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const db = getDB();
+  const now = new Date();
+  payload = payload || {};
 
-  try {
-    const db = getDB();
-    const now = new Date();
-    payload = payload || {};
+  validateBD03Server(payload);
 
-    validateBD03Server(payload);
+  const submissionId = Utilities.getUuid();
+  payload.submission_id = submissionId;
 
-    const submissionId = Utilities.getUuid();
-    payload.submission_id = submissionId;
+  const mainSheet = db.getSheetByName("BD03_main");
+  if (!mainSheet) throw new Error("Missing sheet: BD03_main");
 
-    const mainSheet = db.getSheetByName("BD03_main");
-    if (!mainSheet) throw new Error("Missing sheet: BD03_main");
+  appendObjectRow(mainSheet, payload, {
+    submissionId: submissionId,
+    createdBy: payload.official_email || "",
+    now: now,
+  });
 
-    appendObjectRow(mainSheet, payload, {
+  appendRowsFromArray(
+    db.getSheetByName("BD03_other_persons"),
+    payload.other_persons || [],
+    {
       submissionId: submissionId,
       createdBy: payload.official_email || "",
       now: now,
-    });
+    },
+  );
 
-    appendRowsFromArray(
-      db.getSheetByName("BD03_other_persons"),
-      payload.other_persons || [],
-      {
-        submissionId: submissionId,
-        createdBy: payload.official_email || "",
-        now: now,
-      },
-    );
-
-    appendRowsFromArray(
-      db.getSheetByName("BD03_milestones"),
-      payload.milestones || [],
-      {
-        submissionId: submissionId,
-        createdBy: payload.official_email || "",
-        now: now,
-      },
-    );
-
-    appendSubmissionLedger(db, {
+  appendRowsFromArray(
+    db.getSheetByName("BD03_milestones"),
+    payload.milestones || [],
+    {
       submissionId: submissionId,
-      formCode: "BD03",
-      pcode: payload.pcode || "",
       createdBy: payload.official_email || "",
       now: now,
-      payload: payload,
-    });
+    },
+  );
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "BD03",
-      createdBy: payload.official_email || "",
-      now: now,
-      payload: payload,
-    });
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "BD03",
+    pcode: payload.pcode || "",
+    createdBy: payload.official_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    sendBD03Email(payload, submissionId);
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "BD03",
+    createdBy: payload.official_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    return {
-      ok: true,
-      submission_id: submissionId,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  sendBD03Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
 }
 
 function validateBD03Server(payload) {
   const required = [
     ["lead_date", "Date of Client's Mail/ Lead Generation"],
     ["official_email", "Official Email ID"],
-    ["team_name", "Team Name"],
+    ["team", "Team Name"],
     ["team_head_email", "Team Head Email ID"],
     ["csuite_officer_email", "C-Suite Officer Email ID"],
     ["eia_coordinator_email", "EIA Coordinator Email"],
@@ -719,49 +703,45 @@ function validateBD03Server(payload) {
 }
 
 function submitTF02(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const db = getDB();
+  const sheet = db.getSheetByName("tf02_main");
+  if (!sheet) throw new Error("Missing sheet: tf02_main");
 
-  try {
-    const db = getDB();
-    const sheet = db.getSheetByName("tf02_main");
-    if (!sheet) throw new Error("Missing sheet: tf02_main");
+  payload = payload || {};
+  validateTF02(payload);
 
-    payload = payload || {};
-    validateTF02(payload);
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+  payload.submission_id = submissionId;
 
-    const now = new Date();
-    const submissionId = Utilities.getUuid();
-    payload.submission_id = submissionId;
+  appendTF02Row(sheet, payload, submissionId, now);
 
-    appendTF02Row(sheet, payload, submissionId, now);
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF02",
+    pcode: payload.pcode || "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendSubmissionLedger(db, {
-      submissionId: submissionId,
-      formCode: "TF02",
-      pcode: payload.pcode || "",
-      createdBy: payload.employee_email || "",
-      now: now,
-      payload: payload,
-    });
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF02",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "TF02",
-      createdBy: payload.employee_email || "",
-      now: now,
-      payload: payload,
-    });
+  sendTF02Email(payload, submissionId);
 
-    sendTF02Email(payload, submissionId);
-
-    return {
-      ok: true,
-      submission_id: submissionId,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
 }
 
 function validateTF02(p) {
@@ -868,49 +848,45 @@ function appendTF02Row(sheet, p, submissionId, now) {
 }
 
 function submitWPF03(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
 
-  try {
-    const db = getDB();
-    const now = new Date();
-    const submissionId = Utilities.getUuid();
+  payload = payload || {};
+  payload.submission_id = submissionId;
+  payload.team_name = "Fountain";
 
-    payload = payload || {};
-    payload.submission_id = submissionId;
-    payload.team_name = "Fountain";
+  validateWPF03Server(payload);
 
-    validateWPF03Server(payload);
+  writeWPF03Main(db, payload, submissionId, now);
+  writeWPF03AnalysisRows(db, payload, submissionId, now);
 
-    writeWPF03Main(db, payload, submissionId, now);
-    writeWPF03AnalysisRows(db, payload, submissionId, now);
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "WPF03",
+    pcode: "",
+    createdBy: payload.created_by || payload.team_name || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendSubmissionLedger(db, {
-      submissionId: submissionId,
-      formCode: "WPF03",
-      pcode: "",
-      createdBy: payload.created_by || payload.team_name || "",
-      now: now,
-      payload: payload,
-    });
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "WPF03",
+    createdBy: payload.created_by || payload.team_name || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "WPF03",
-      createdBy: payload.created_by || payload.team_name || "",
-      now: now,
-      payload: payload,
-    });
+  sendWPF03Email(payload, submissionId);
 
-    sendWPF03Email(payload, submissionId);
-
-    return {
-      ok: true,
-      submission_id: submissionId,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
 }
 
 function validateWPF03Server(payload) {
@@ -1001,48 +977,41 @@ function writeWPF03AnalysisRows(db, payload, submissionId, now) {
 }
 
 function submitTF01(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
 
-  try {
-    const db = getDB();
-    const now = new Date();
-    const submissionId = Utilities.getUuid();
+  payload = payload || {};
+  payload.submission_id = submissionId;
 
-    payload = payload || {};
-    payload.submission_id = submissionId;
+  validateTF01(payload);
 
-    validateTF01(payload);
+  writeTF01Main(db, payload, submissionId, now);
+  writeTF01ProjectRows(db, payload, submissionId, now);
 
-    writeTF01Main(db, payload, submissionId, now);
-    writeTF01ProjectRows(db, payload, submissionId, now);
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF01",
+    pcode: firstPcodeFromTF01(payload),
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendSubmissionLedger(db, {
-      submissionId: submissionId,
-      formCode: "TF01",
-      pcode: firstPcodeFromTF01(payload),
-      createdBy: payload.employee_email || "",
-      now: now,
-      payload: payload,
-    });
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF01",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "TF01",
-      createdBy: payload.employee_email || "",
-      now: now,
-      payload: payload,
-    });
+  sendTF01Email(payload, submissionId);
 
-    sendTF01Email(payload, submissionId);
-
-    return {
-      ok: true,
-      submission_id: submissionId,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return {
+    ok: true,
+    submission_id: submissionId,
+  };
 }
 
 function validateTF01(payload) {
@@ -1137,63 +1106,59 @@ function firstPcodeFromTF01(payload) {
 }
 
 function submitTF22(payload) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const db = getDB();
+  const sheet = db.getSheetByName("tf22_main");
+  if (!sheet) throw new Error("Missing sheet: tf22_main");
 
-  try {
-    const db = getDB();
-    const sheet = db.getSheetByName("tf22_main");
-    if (!sheet) throw new Error("Missing sheet: tf22_main");
+  payload = payload || {};
+  validateTF22(payload);
 
-    payload = payload || {};
-    validateTF22(payload);
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
 
-    const now = new Date();
-    const submissionId = Utilities.getUuid();
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.employee_email || "",
+    payload.team_name || "",
+    payload.type_of_work || "",
+    payload.project_name || "",
+    payload.date_of_completion || "",
+    payload.project_code || "",
+    payload.type_of_service || "",
+    payload.attachments_url || "",
+    payload.remarks || "",
+  ]);
 
-    sheet.appendRow([
-      submissionId,
-      now,
-      payload.date || "",
-      payload.employee_first_name || "",
-      payload.employee_last_name || "",
-      payload.employee_email || "",
-      payload.team_name || "",
-      payload.type_of_work || "",
-      payload.project_name || "",
-      payload.date_of_completion || "",
-      payload.project_code || "",
-      payload.type_of_service || "",
-      payload.attachments_url || "",
-      payload.remarks || "",
-    ]);
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF22",
+    pcode: payload.project_code || "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendSubmissionLedger(db, {
-      submissionId: submissionId,
-      formCode: "TF22",
-      pcode: payload.project_code || "",
-      createdBy: payload.employee_email || "",
-      now: now,
-      payload: payload,
-    });
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF22",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
 
-    appendAuditLog(db, {
-      submissionId: submissionId,
-      formCode: "TF22",
-      createdBy: payload.employee_email || "",
-      now: now,
-      payload: payload,
-    });
+  sendTF22Email(payload, submissionId);
 
-    sendTF22Email(payload, submissionId);
-
-    return {
-      ok: true,
-      submission_id: submissionId,
-    };
-  } finally {
-    lock.releaseLock();
-  }
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
 }
 
 function validateTF22(payload) {
@@ -1209,6 +1174,265 @@ function validateTF22(payload) {
   if (!String(payload.project_code || "").trim()) missing.push("Project Code");
   if (!String(payload.type_of_service || "").trim())
     missing.push("Type of Service");
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitTF07(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF07(payload);
+
+  const sheet = db.getSheetByName("TF07");
+  if (!sheet) throw new Error("Missing sheet: TF07");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.employee_email || "",
+    payload.team_name || "",
+    payload.project_name || "",
+    payload.project_code || "",
+    payload.type_of_work || "",
+    payload.type_of_work_other || "",
+    payload.milestone_achieved || "",
+    payload.milestone_achieved_other || "",
+    payload.date_of_milestone_achieved || "",
+    payload.proof_link || "",
+    payload.submission_status || "",
+    payload.person_to_bill || "",
+    payload.email_of_person_to_bill || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF07",
+    pcode: payload.project_code || "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF07",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF07Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF07(payload) {
+  const missing = [];
+
+  if (!String(payload.date || "").trim()) missing.push("Date");
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Employee Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.project_name || "").trim()) missing.push("Project Name");
+  if (!String(payload.project_code || "").trim()) missing.push("Project Code");
+  if (!String(payload.type_of_work || "").trim()) missing.push("Type of Work");
+  if (!String(payload.milestone_achieved || "").trim())
+    missing.push("Milestone Achieved");
+  if (!String(payload.date_of_milestone_achieved || "").trim())
+    missing.push("Date of Milestone achieved");
+  if (!String(payload.proof_link || "").trim())
+    missing.push("Link to Screenshot or Proof of Achieving Milestone");
+  if (!String(payload.submission_status || "").trim())
+    missing.push("Submission Status");
+  if (!String(payload.person_to_bill || "").trim())
+    missing.push("Person to Bill");
+  if (!String(payload.email_of_person_to_bill || "").trim())
+    missing.push("Email ID of Person to Bill");
+
+  if (
+    String(payload.type_of_work || "").toLowerCase() === "other" &&
+    !String(payload.type_of_work_other || "").trim()
+  ) {
+    missing.push("Type of Work - other specify");
+  }
+
+  if (
+    String(payload.milestone_achieved || "").toLowerCase() === "other" &&
+    !String(payload.milestone_achieved_other || "").trim()
+  ) {
+    missing.push("Milestone Achieved - other specify");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitTF05(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF05(payload);
+
+  const sheet = db.getSheetByName("TF05");
+  if (!sheet) throw new Error("Missing sheet: TF05");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.official_email || "",
+    payload.team_name || "",
+    payload.eia_coordinator_name || "",
+    payload.qcc_reviewers || "",
+    payload.presenter_first_name || "",
+    payload.presenter_last_name || "",
+    payload.presenter_email || "",
+    payload.developer_company_name || "",
+    payload.project_name || "",
+    payload.project_proponent_first_name || "",
+    payload.project_proponent_last_name || "",
+    payload.project_code || "",
+    payload.proposed_project_cost_lacs || "",
+    payload.existing_project_cost_lacs || "",
+    payload.project_cost_after_proposed_ec_lacs || "",
+    payload.project_location || "",
+    payload.plot_area_sq_m || "",
+    payload.built_up_area_sq_m || "",
+    payload.capacity || "",
+    payload.emp_cost_capital_lacs || "",
+    payload.category || "",
+    payload.activity || "",
+    payload.parivesh_login_id || "",
+    payload.parivesh_password || "",
+    payload.type_of_presentation || "",
+    payload.type_of_presentation_other || "",
+    payload.eac_committee || "",
+    payload.proposal_no || "",
+    payload.date_of_uploading || "",
+    payload.agenda_no || "",
+    payload.date_of_eac_meeting || "",
+    payload.internal_meeting_link || "",
+    payload.eac_meeting_link || "",
+    payload.meeting_s_no || "",
+    payload.master_ppt_link || "",
+    payload.summarised_ppt_link || "",
+    payload.brief_writeup_annexure || "",
+    payload.uploading_document_single_file_link || "",
+    payload.online_report_link || "",
+    payload.undertaking_link || "",
+    payload.kml_file_link || "",
+    payload.backup_folder_link || "",
+    payload.circulation_documents_link_docx || "",
+    payload.circulation_documents_pdf || "",
+    payload.critical_points || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF05",
+    pcode: payload.project_code || "",
+    createdBy: payload.official_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF05",
+    createdBy: payload.official_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF05Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF05(payload) {
+  const missing = [];
+
+  if (!String(payload.official_email || "").trim())
+    missing.push("Employee Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.eia_coordinator_name || "").trim())
+    missing.push("EIA Coordinator Name");
+  if (!String(payload.presenter_email || "").trim())
+    missing.push("Email ID of the person who will present in EAC/ SEAC");
+  if (!String(payload.project_name || "").trim()) missing.push("Project Name");
+  if (!String(payload.project_code || "").trim()) missing.push("Project Code");
+  if (!String(payload.proposed_project_cost_lacs || "").trim())
+    missing.push("Proposed Project Cost");
+  if (!String(payload.project_location || "").trim())
+    missing.push("Project Location");
+  if (!String(payload.category || "").trim()) missing.push("Category");
+  if (!String(payload.activity || "").trim()) missing.push("Activity");
+  if (!String(payload.type_of_presentation || "").trim())
+    missing.push("Type of Presentation");
+  if (!String(payload.eac_committee || "").trim())
+    missing.push("EAC Committee");
+  if (!String(payload.proposal_no || "").trim()) missing.push("Proposal No.");
+  if (!String(payload.agenda_no || "").trim()) missing.push("Agenda No.");
+  if (!String(payload.internal_meeting_link || "").trim())
+    missing.push("Internal Meeting Link");
+  if (!String(payload.eac_meeting_link || "").trim())
+    missing.push("EAC Meeting Link");
+  if (!String(payload.master_ppt_link || "").trim())
+    missing.push("Master PPT Link");
+  if (!String(payload.summarised_ppt_link || "").trim())
+    missing.push("Summarised PPT Link");
+  if (!String(payload.uploading_document_single_file_link || "").trim())
+    missing.push("Uploading Document - Single File Link");
+  if (!String(payload.online_report_link || "").trim())
+    missing.push("Online Report Link");
+  if (!String(payload.undertaking_link || "").trim())
+    missing.push("Undertaking Link");
+  if (!String(payload.kml_file_link || "").trim())
+    missing.push("KML File Link");
+  if (!String(payload.backup_folder_link || "").trim())
+    missing.push("Backup folder Link");
+  if (!String(payload.circulation_documents_link_docx || "").trim())
+    missing.push("Circulation Documents Link- in Docx");
+  if (!String(payload.critical_points || "").trim())
+    missing.push("Critical Points");
+
+  if (
+    String(payload.type_of_presentation || "").toLowerCase() === "other" &&
+    !String(payload.type_of_presentation_other || "").trim()
+  ) {
+    missing.push("If Others, Pls Specify");
+  }
 
   if (missing.length) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));
