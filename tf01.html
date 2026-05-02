@@ -257,7 +257,15 @@
         return true;
       }
 
+      let isSubmitting = false;
+
       function submitTF01() {
+        if (isSubmitting) return; // blocks double-clicks instantly
+        isSubmitting = true;
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Submitting...";
+
         const payload = {
           date: document.getElementById("date").value,
           employee_first_name: document.getElementById("employee_first_name")
@@ -270,14 +278,23 @@
           remarks: document.getElementById("remarks").value,
         };
 
-        if (!validateTF01(payload)) return;
+        if (!validateTF01(payload)) {
+          isSubmitting = false;
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          return;
+        }
 
         google.script.run
-          .withSuccessHandler(function () {
-            window.location.search = "?page=thankyou";
+          .withSuccessHandler(function (res) {
+            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
+            document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Submit";
           })
           .submitTF01(payload);
       }

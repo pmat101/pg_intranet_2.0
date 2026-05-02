@@ -583,17 +583,14 @@
         return true;
       }
 
+      let isSubmitting = false;
+
       function submitTF02() {
+        if (isSubmitting) return; // blocks double-clicks instantly
+        isSubmitting = true;
         const submitBtn = document.getElementById("submitBtn");
         submitBtn.disabled = true;
-        submitBtn.innerText = "Processing... Please wait";
-        submitBtn.style.backgroundColor = "#8f4a3f";
-
-        setTimeout(function () {
-          submitBtn.disabled = false;
-          submitBtn.innerText = "Submit";
-          submitBtn.style.backgroundColor = "";
-        }, 15000);
+        submitBtn.innerText = "Submitting...";
 
         const payload = {
           date: document.getElementById("date").value,
@@ -666,7 +663,12 @@
           remarks: document.getElementById("remarks").value,
         };
 
-        if (!validateTF02(payload)) return;
+        if (!validateTF02(payload)) {
+          isSubmitting = false;
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          return;
+        }
 
         google.script.run
           .withSuccessHandler(function (res) {
@@ -675,6 +677,9 @@
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Submit";
           })
           .submitTF02(payload);
       }

@@ -77,8 +77,8 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="customer-contact"
-            >Customer Contact Number </span></label
-          >
+            >Customer Contact Number
+          </label>
           <input type="tel" id="customer-contact" />
         </div>
         <div class="form-group">
@@ -229,6 +229,7 @@
             <option value="ag">Mrs. Aarti Gupta</option>
           </select>
         </div>
+
         <div class="form-group">
           <label class="form-label" for="rfq-url">
             RFQ / Scope of Work document URL
@@ -365,17 +366,14 @@
         return true;
       }
 
+      let isSubmitting = false;
+
       function submitBD01A() {
+        if (isSubmitting) return; // blocks double-clicks instantly
+        isSubmitting = true;
         const submitBtn = document.getElementById("submitBtn");
         submitBtn.disabled = true;
-        submitBtn.innerText = "Processing... Please wait";
-        submitBtn.style.backgroundColor = "#8f4a3f";
-
-        setTimeout(function () {
-          submitBtn.disabled = false;
-          submitBtn.innerText = "Submit";
-          submitBtn.style.backgroundColor = "";
-        }, 15000);
+        submitBtn.innerText = "Submitting...";
 
         const payload = {
           leadDate: document.getElementById("lead-date").value,
@@ -413,22 +411,23 @@
           remarks: document.getElementById("remarks").value,
         };
 
-        if (!validateBD01A(payload)) return;
+        if (!validateBD01A(payload)) {
+          isSubmitting = false;
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Submit";
+          return;
+        }
 
         google.script.run
           .withSuccessHandler(function (res) {
-            alert(
-              "Proposal Created\n\n" +
-                "Proposal ID: " +
-                res.proposalID +
-                "\n" +
-                "PCODE: " +
-                res.pcode,
-            );
+            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
             document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Submit";
           })
           .submitBD01A(payload);
       }

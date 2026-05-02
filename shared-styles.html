@@ -335,4 +335,26 @@
     background: #f8fafc;
     font-weight: 500;
   }
+
+  .star-rating {
+    display: flex;
+    gap: 8px;
+    font-size: 32px;
+    cursor: pointer;
+  }
+
+  .star-rating span {
+    color: #ccc;
+    transition:
+      transform 0.1s ease,
+      color 0.2s ease;
+  }
+
+  .star-rating span.active {
+    color: #f5b301;
+  }
+
+  .star-rating span:hover {
+    transform: scale(1.2);
+  }
 </style>

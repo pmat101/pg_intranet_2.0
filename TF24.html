@@ -4,25 +4,17 @@
     <base target="_top" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TF22</title>
+    <title>TF24</title>
     <?!= HtmlService.createHtmlOutputFromFile('shared-styles').getContent(); ?>
   </head>
   <body>
     <div class="form-wrapper">
-      <div class="form-title">TF22</div>
-      <div class="form-subtitle">
-        Information to Account section wrt submission/closure of project
-      </div>
+      <div class="form-title">TF24</div>
+      <div class="form-subtitle">EDS raised</div>
 
       <div class="form-section">
         <div class="form-group">
-          <label class="form-label" for="date">Date</label>
-          <input type="date" id="date" />
-          <div class="helper-text">dd-MMM-yyyy</div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Name</label>
+          <label class="form-label">Employee Name</label>
           <div class="form-row">
             <div class="form-col">
               <input
@@ -48,78 +40,85 @@
             >Employee Email ID <span class="required">*</span></label
           >
           <input type="email" id="employee_email" required />
+          <div class="helper-text">Email ID of the person filling the form</div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="team_name">Team</label>
-          <select id="team_name"></select>
+          <label class="form-label" for="team_name"
+            >Team Name <span class="required">*</span></label
+          >
+          <select id="team_name" required></select>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Type of Work</label>
-          <div class="form-row">
-            <div class="form-col-choice">
-              <input
-                type="radio"
-                name="type_of_work"
-                id="work_submission"
-                value="Submission / Grant"
-              />
-              <label for="work_submission">Submission / Grant</label>
-            </div>
-            <div class="form-col-choice">
-              <input
-                type="radio"
-                name="type_of_work"
-                id="work_closure"
-                value="Closure / Completion"
-              />
-              <label for="work_closure">Closure / Completion</label>
-            </div>
-          </div>
+          <label class="form-label" for="company_name">Company Name</label>
+          <input type="text" id="company_name" />
         </div>
 
         <div class="form-group">
           <label class="form-label" for="project_name"
-            >1, Project Name <span class="required">*</span></label
+            >Project Name <span class="required">*</span></label
           >
           <input type="text" id="project_name" required />
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="date_of_completion"
-            >Date of completion of project
-            <span class="required">*</span></label
-          >
-          <input type="date" id="date_of_completion" required />
-          <div class="helper-text">dd-MMM-yyyy</div>
-        </div>
-
-        <div class="form-group">
           <label class="form-label" for="project_code"
-            >2, Project Code <span class="required">*</span></label
+            >Project Code <span class="required">*</span></label
           >
           <input type="text" id="project_code" required />
           <div class="helper-text">
-            Refer the active PCODE list used in your database
+            Refer the active PCODE list in your project sheet
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="type_of_service"
-            >Type of Service <span class="required">*</span></label
+          <label class="form-label" for="parivesh_proposal_number"
+            >Parivesh proposal number</label
           >
-          <select id="type_of_service" required></select>
+          <input type="text" id="parivesh_proposal_number" />
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="attachments_url"
-            >Any other Attachment(s)</label
+          <label class="form-label" for="type_of_case">Type of Case</label>
+          <select id="type_of_case"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="category">Category</label>
+          <select id="category"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sector">Sector</label>
+          <select id="sector"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="eac_seac">EAC/SEAC</label>
+          <select id="eac_seac"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="eia_coordinator_name"
+            >EIA Coordinator Name <span class="required">*</span></label
+          >
+          <select id="eia_coordinator_name" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="query_raised">Query Raised</label>
+          <textarea id="query_raised"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="eds_screenshot_url"
+            >Screenshot of EDS</label
           >
           <input
             type="url"
-            id="attachments_url"
-            placeholder="Paste file URL here"
+            id="eds_screenshot_url"
+            placeholder="Paste screenshot link here"
           />
         </div>
 
@@ -132,8 +131,8 @@
       <button
         class="btn-primary"
         type="button"
-        onclick="submitTF22()"
         id="submitBtn"
+        onclick="submitTF24()"
       >
         Submit
       </button>
@@ -154,9 +153,29 @@
               "Select",
             );
             fillSelect(
-              document.getElementById("type_of_service"),
-              data.tf22ServiceTypes || [],
+              document.getElementById("category"),
+              data.category || [],
               "Select",
+            );
+            fillSelect(
+              document.getElementById("type_of_case"),
+              data.tf24TypeOfCase || [],
+              "Select",
+            );
+            fillSelect(
+              document.getElementById("eac_seac"),
+              data.eac || [],
+              "Select",
+            );
+            fillSelect(
+              document.getElementById("eia_coordinator_name"),
+              data.eiaCoordinator || [],
+              "Select",
+            );
+            fillSelect(
+              document.getElementById("sector"),
+              data.sector || [],
+              "-Select-",
             );
           })
           .getDropdownData();
@@ -165,7 +184,6 @@
       function fillSelect(select, items, placeholder) {
         if (!select) return;
         select.innerHTML = "";
-
         const first = document.createElement("option");
         first.value = "";
         first.textContent = placeholder || "Select";
@@ -179,21 +197,14 @@
         });
       }
 
-      function getCheckedValue(name) {
-        const checked = document.querySelector(`input[name="${name}"]:checked`);
-        return checked ? checked.value : "";
-      }
-
-      function validateTF22(payload) {
+      function validateTF24(p) {
         const missing = [];
-        if (!payload.employee_email) missing.push("Employee Email ID");
-        if (!payload.team_name) missing.push("Team");
-        if (!payload.type_of_work) missing.push("Type of Work");
-        if (!payload.project_name) missing.push("Project Name");
-        if (!payload.date_of_completion)
-          missing.push("Date of completion of project");
-        if (!payload.project_code) missing.push("Project Code");
-        if (!payload.type_of_service) missing.push("Type of Service");
+        if (!p.employee_email) missing.push("Employee Email ID");
+        if (!p.team_name) missing.push("Team Name");
+        if (!p.project_name) missing.push("Project Name");
+        if (!p.project_code) missing.push("Project Code");
+        if (!p.eia_coordinator_name) missing.push("EIA Coordinator Name");
+        if (!p.query_raised) missing.push("Query Raised");
 
         if (missing.length) {
           alert("Please fill:\n\n" + missing.join("\n"));
@@ -204,7 +215,7 @@
 
       let isSubmitting = false;
 
-      function submitTF22() {
+      function submitTF24() {
         if (isSubmitting) return; // blocks double-clicks instantly
         isSubmitting = true;
         const submitBtn = document.getElementById("submitBtn");
@@ -212,24 +223,31 @@
         submitBtn.innerText = "Submitting...";
 
         const payload = {
-          date: document.getElementById("date").value,
           employee_first_name: document.getElementById("employee_first_name")
             .value,
           employee_last_name:
             document.getElementById("employee_last_name").value,
           employee_email: document.getElementById("employee_email").value,
           team_name: document.getElementById("team_name").value,
-          type_of_work: getCheckedValue("type_of_work"),
+          company_name: document.getElementById("company_name").value,
           project_name: document.getElementById("project_name").value,
-          date_of_completion:
-            document.getElementById("date_of_completion").value,
           project_code: document.getElementById("project_code").value,
-          type_of_service: document.getElementById("type_of_service").value,
-          attachments_url: document.getElementById("attachments_url").value,
+          parivesh_proposal_number: document.getElementById(
+            "parivesh_proposal_number",
+          ).value,
+          type_of_case: document.getElementById("type_of_case").value,
+          category: document.getElementById("category").value,
+          sector: document.getElementById("sector").value,
+          eac_seac: document.getElementById("eac_seac").value,
+          eia_coordinator_name: document.getElementById("eia_coordinator_name")
+            .value,
+          query_raised: document.getElementById("query_raised").value,
+          eds_screenshot_url:
+            document.getElementById("eds_screenshot_url").value,
           remarks: document.getElementById("remarks").value,
         };
 
-        if (!validateTF22(payload)) {
+        if (!validateTF24(payload)) {
           isSubmitting = false;
           submitBtn.disabled = false;
           submitBtn.innerText = "Submit";
@@ -247,7 +265,7 @@
             submitBtn.disabled = false;
             submitBtn.innerText = "Submit";
           })
-          .submitTF22(payload);
+          .submitTF24(payload);
       }
     </script>
   </body>

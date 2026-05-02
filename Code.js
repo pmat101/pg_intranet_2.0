@@ -58,7 +58,7 @@ function genProposalIDnPCODE(payload) {
   const specs = normalizeCode(payload.specs, 3);
 
   const proposalID = `${pgCompany}${finYear}${stateCode}${serialCode}${typeOfWork}${sector}${specs}`;
-  const pcode = `${pgCompany}${finYear}${stateCode}${serialCode}`;
+  const pcode = `${pgCompany}${finYear}${serialCode}`;
 
   return { proposalID, pcode };
 }
