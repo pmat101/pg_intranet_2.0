@@ -252,16 +252,45 @@
 
       function validateADM03(p) {
         const missing = [];
-        if (!p.requestor_email) missing.push("Official Email ID of Requester");
-        if (!p.team_name) missing.push("Team Name");
-        if (!p.project_name) missing.push("Project Name");
-        if (!p.pcode) missing.push("PCODE");
-        if (!p.distance_travelled) missing.push("Distance travelled");
+
+        if (!String(p.requestor_email || "").trim())
+          missing.push("Official Email ID of Requester");
+        if (!String(p.team_name || "").trim()) missing.push("Team Name");
+
+        const details = Array.isArray(p.details) ? p.details : [];
+        const usedRows = details.filter(function (r) {
+          return (
+            String(r.date_of_pick_up || "").trim() ||
+            String(r.vehicle_required_till_date || "").trim() ||
+            String(r.name_of_person_going_for_visit || "").trim() ||
+            String(r.time_of_pickup_team || "").trim() ||
+            String(r.pickup_point || "").trim() ||
+            String(r.places_to_be_visited || "").trim() ||
+            String(r.project_name || "").trim() ||
+            String(r.pcode || "").trim() ||
+            String(r.distance_travelled || "").trim() ||
+            String(r.purpose_of_visit || "").trim()
+          );
+        });
+
+        if (!usedRows.length) {
+          missing.push("Vehicle Requirement Details");
+        } else {
+          usedRows.forEach(function (r, i) {
+            if (!String(r.project_name || "").trim())
+              missing.push(`Project Name (row ${i + 1})`);
+            if (!String(r.pcode || "").trim())
+              missing.push(`PCODE (row ${i + 1})`);
+            if (!String(r.distance_travelled || "").trim())
+              missing.push(`Distance travelled (row ${i + 1})`);
+          });
+        }
 
         if (missing.length) {
           alert("Please fill:\n\n" + missing.join("\n"));
           return false;
         }
+
         return true;
       }
 
@@ -286,6 +315,16 @@
           remarks: document.getElementById("remarks").value,
           details: collectADM03Rows(),
         };
+        const firstDetail =
+          (payload.details || []).find(function (r) {
+            return (
+              String(r.project_name || "").trim() ||
+              String(r.pcode || "").trim()
+            );
+          }) || {};
+
+        const projectName = firstDetail.project_name || "";
+        const pcode = firstDetail.pcode || "";
 
         if (!validateADM03(payload)) {
           isSubmitting = false;

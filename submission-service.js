@@ -350,6 +350,12 @@ function validateBD01AServer(payload) {
     ["customerClass", "Customer Classification"],
     ["leadSource", "Lead Source"],
   ];
+  if (
+    String(payload.leadSource || "").toLowerCase() === "others" &&
+    !String(payload.leadSourceOtherSpecify || "").trim()
+  ) {
+    throw new Error("Please fill: Lead Source specify");
+  }
 
   const missing = required
     .filter(([key]) => !String(payload[key] || "").trim())
@@ -401,6 +407,7 @@ function appendBD01ARow(sheet, payload, submissionId, proposalID, pcode, now) {
     payload.pgCompany || "",
     payload.customerClass || "",
     payload.leadSource || "",
+    payload.leadSourceOtherSpecify || "",
     payload.rfqUrl || "",
     payload.remarks || "",
   ]);
@@ -2259,14 +2266,15 @@ function submitADM03(payload) {
   const submissionId = Utilities.getUuid();
 
   payload = payload || {};
+  payload.submission_id = submissionId;
 
-  validateADM03(payload);
+  validateADM03Server(payload);
 
   const mainSheet = db.getSheetByName("ADM03_main");
-  const detailSheet = db.getSheetByName("ADM03_visit_details");
+  const detailsSheet = db.getSheetByName("ADM03_visit_details");
 
   if (!mainSheet) throw new Error("Missing sheet: ADM03_main");
-  if (!detailSheet) throw new Error("Missing sheet: ADM03_visit_details");
+  if (!detailsSheet) throw new Error("Missing sheet: ADM03_details");
 
   mainSheet.appendRow([
     submissionId,
@@ -2280,21 +2288,54 @@ function submitADM03(payload) {
     payload.remarks || "",
   ]);
 
-  (payload.details || []).forEach(function (row, index) {
-    detailSheet.appendRow([
+  const rows = Array.isArray(payload.details) ? payload.details : [];
+  const usedRows = rows.filter(function (r) {
+    return (
+      String(r.date_of_pick_up || "").trim() ||
+      String(r.vehicle_required_till_date || "").trim() ||
+      String(r.name_of_person_going_for_visit || "").trim() ||
+      String(r.time_of_pickup_team || "").trim() ||
+      String(r.pickup_point || "").trim() ||
+      String(r.places_to_be_visited || "").trim() ||
+      String(r.project_name || "").trim() ||
+      String(r.pcode || "").trim() ||
+      String(r.distance_travelled || "").trim() ||
+      String(r.purpose_of_visit || "").trim()
+    );
+  });
+
+  usedRows.forEach(function (r, index) {
+    detailsSheet.appendRow([
       submissionId,
       index + 1,
-      row.date_of_pickup || "",
-      row.vehicle_required_till_date || "",
-      row.name_of_person_going_for_visit || "",
-      row.time_of_pickup_team || "",
-      row.pickup_point || "",
-      row.places_to_be_visited || "",
-      row.project_name || "",
-      row.pcode || "",
-      row.distance_travelled || "",
-      row.purpose_of_visit || "",
+      r.date_of_pickup || "",
+      r.vehicle_required_till_date || "",
+      r.name_of_person_going_for_visit || "",
+      r.time_of_pickup_team || "",
+      r.pickup_point || "",
+      r.places_to_be_visited || "",
+      r.project_name || "",
+      r.pcode || "",
+      r.distance_travelled || "",
+      r.purpose_of_visit || "",
     ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "ADM03",
+    pcode: firstPcodeFromADM03(payload),
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "ADM03",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
   });
 
   sendADM03Email(payload, submissionId);
@@ -2308,29 +2349,52 @@ function submitADM03(payload) {
   };
 }
 
-function validateADM03(payload) {
+function validateADM03Server(payload) {
   const missing = [];
 
   if (!String(payload.requestor_email || "").trim())
     missing.push("Official Email ID of Requester");
   if (!String(payload.team_name || "").trim()) missing.push("Team Name");
 
-  if (!Array.isArray(payload.details) || !payload.details.length) {
-    missing.push("At least one vehicle requirement row");
+  const rows = Array.isArray(payload.details) ? payload.details : [];
+  const usedRows = rows.filter(function (r) {
+    return (
+      String(r.date_of_pick_up || "").trim() ||
+      String(r.vehicle_required_till_date || "").trim() ||
+      String(r.name_of_person_going_for_visit || "").trim() ||
+      String(r.time_of_pickup_team || "").trim() ||
+      String(r.pickup_point || "").trim() ||
+      String(r.places_to_be_visited || "").trim() ||
+      String(r.project_name || "").trim() ||
+      String(r.pcode || "").trim() ||
+      String(r.distance_travelled || "").trim() ||
+      String(r.purpose_of_visit || "").trim()
+    );
+  });
+
+  if (!usedRows.length) {
+    missing.push("Vehicle Requirement Details");
   } else {
-    payload.details.forEach(function (row, i) {
-      if (!String(row.project_name || "").trim())
-        missing.push(`Project Name in row ${i + 1}`);
-      if (!String(row.pcode || "").trim())
-        missing.push(`PCODE in row ${i + 1}`);
-      if (!String(row.distance_travelled || "").trim())
-        missing.push(`Distance travelled in row ${i + 1}`);
+    usedRows.forEach(function (r, i) {
+      if (!String(r.project_name || "").trim())
+        missing.push(`Project Name (row ${i + 1})`);
+      if (!String(r.pcode || "").trim()) missing.push(`PCODE (row ${i + 1})`);
+      if (!String(r.distance_travelled || "").trim())
+        missing.push(`Distance travelled (row ${i + 1})`);
     });
   }
 
   if (missing.length) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));
   }
+}
+
+function firstPcodeFromADM03(payload) {
+  const rows = Array.isArray(payload.details) ? payload.details : [];
+  for (const row of rows) {
+    if (row && String(row.pcode || "").trim()) return row.pcode;
+  }
+  return "";
 }
 
 function submitFQ01(payload) {
@@ -3773,4 +3837,903 @@ function validateTF17(payload) {
   if (missing.length) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));
   }
+}
+
+function submitTF13(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF13(payload);
+
+  const mainSheet = db.getSheetByName("TF13_main");
+  const obsSheet = db.getSheetByName("TF13_observations");
+  const filesSheet = db.getSheetByName("TF13_files_reviewed");
+
+  if (!mainSheet) throw new Error("Missing sheet: TF13_main");
+  if (!obsSheet) throw new Error("Missing sheet: TF13_observations");
+  if (!filesSheet) throw new Error("Missing sheet: TF13_files_reviewed");
+
+  const filesReviewed = Array.isArray(payload.files_reviewed)
+    ? payload.files_reviewed
+    : [];
+  const filesReviewedUsed = filesReviewed.filter(
+    (r) =>
+      String(r.type_of_document || "").trim() ||
+      String(r.document_link || "").trim(),
+  );
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.recipient_team_name || "",
+    payload.eia_coordinator_name || "",
+    payload.csuite_officer_name || "",
+    payload.project_name || "",
+    payload.company_name || "",
+    payload.location_of_project || "",
+    payload.pcode || "",
+    payload.status_stage_of_case || "",
+    payload.review_levels || "",
+    payload.level1_reviewer_names || "",
+    payload.level1_reviewer_remarks || "",
+    payload.level2_reviewer_names || "",
+    payload.level2_reviewer_remarks || "",
+    payload.level3_reviewer_names || "",
+    payload.level3_reviewer_remarks || "",
+    filesReviewedUsed.length,
+    filesReviewedUsed
+      .map((r) => r.type_of_document)
+      .filter(Boolean)
+      .join(", "),
+    payload.review_date || "",
+    payload.remarks || "",
+  ]);
+
+  (payload.level1_observations || []).forEach(function (row, index) {
+    obsSheet.appendRow([
+      submissionId,
+      "Level 1",
+      index + 1,
+      row.observation_link || "",
+    ]);
+  });
+  (payload.level2_observations || []).forEach(function (row, index) {
+    obsSheet.appendRow([
+      submissionId,
+      "Level 2",
+      index + 1,
+      row.observation_link || "",
+    ]);
+  });
+  (payload.level3_observations || []).forEach(function (row, index) {
+    obsSheet.appendRow([
+      submissionId,
+      "Level 3",
+      index + 1,
+      row.observation_link || "",
+    ]);
+  });
+
+  filesReviewedUsed.forEach(function (row, index) {
+    filesSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.type_of_document || "",
+      row.document_link || "",
+    ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF13",
+    pcode: payload.pcode || "",
+    createdBy: payload.eia_coordinator_name || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF13",
+    createdBy: payload.eia_coordinator_name || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF13Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF13(payload) {
+  const missing = [];
+
+  if (!String(payload.recipient_team_name || "").trim())
+    missing.push("Recipient Team Name");
+  if (!String(payload.eia_coordinator_name || "").trim())
+    missing.push("EIA Coordinator");
+  if (!String(payload.csuite_officer_name || "").trim())
+    missing.push("C-Suite officer Involved");
+  if (!String(payload.project_name || "").trim())
+    missing.push("Name of the project");
+  if (!String(payload.company_name || "").trim()) missing.push("Company Name");
+  if (!String(payload.location_of_project || "").trim())
+    missing.push("Location of the project");
+  if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+  if (!String(payload.status_stage_of_case || "").trim())
+    missing.push("Status/ Stage of the Case");
+  if (!String(payload.review_levels || "").trim()) missing.push("Review Level");
+  if (!String(payload.review_date || "").trim()) missing.push("Review Date");
+
+  const levels = String(payload.review_levels || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  function validateLevel(levelNum, namesField, remarksField, obsField) {
+    const selected = levels.includes(`Level ${levelNum}`);
+    if (!selected) return;
+
+    if (!String(payload[namesField] || "").trim()) {
+      missing.push(`Level-${levelNum} Reviewer Name`);
+    }
+    if (!String(payload[remarksField] || "").trim()) {
+      missing.push(`Level-${levelNum} Reviewer Remarks`);
+    }
+
+    const rows = Array.isArray(payload[obsField]) ? payload[obsField] : [];
+    const used = rows.filter((r) => String(r.observation_link || "").trim());
+    if (!used.length) {
+      missing.push(`Level-${levelNum} Reviewer Observations`);
+    } else {
+      used.forEach(function (row, index) {
+        if (!String(row.observation_link || "").trim()) {
+          missing.push(
+            `Level-${levelNum} Reviewer Observations - link (row ${index + 1})`,
+          );
+        }
+      });
+    }
+  }
+
+  validateLevel(
+    1,
+    "level1_reviewer_names",
+    "level1_reviewer_remarks",
+    "level1_observations",
+  );
+  validateLevel(
+    2,
+    "level2_reviewer_names",
+    "level2_reviewer_remarks",
+    "level2_observations",
+  );
+  validateLevel(
+    3,
+    "level3_reviewer_names",
+    "level3_reviewer_remarks",
+    "level3_observations",
+  );
+
+  const filesReviewed = Array.isArray(payload.files_reviewed)
+    ? payload.files_reviewed
+    : [];
+  const filesUsed = filesReviewed.filter(
+    (r) =>
+      String(r.type_of_document || "").trim() ||
+      String(r.document_link || "").trim(),
+  );
+
+  if (!filesUsed.length) {
+    missing.push("Files Reviewed");
+  } else {
+    filesUsed.forEach(function (row, index) {
+      if (!String(row.type_of_document || "").trim()) {
+        missing.push(
+          `Files Reviewed - Type of Documents submitted (row ${index + 1})`,
+        );
+      }
+      if (!String(row.document_link || "").trim()) {
+        missing.push(`Files Reviewed - Link to document (row ${index + 1})`);
+      }
+    });
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitTF04(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF04(payload);
+
+  const mainSheet = db.getSheetByName("TF04_main");
+  const detailSheet = db.getSheetByName("TF04_projects_handover");
+
+  if (!mainSheet) throw new Error("Missing sheet: TF04_main");
+  if (!detailSheet) throw new Error("Missing sheet: TF04_projects_handover");
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.employee_email || "",
+    payload.team_name || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.designation || "",
+    payload.joining_date || "",
+    payload.leaving_or_relieving_date || "",
+    payload.reason_for_handover || "",
+    payload.team_head_first_name || "",
+    payload.team_head_last_name || "",
+    payload.team_head_email || "",
+    payload.remarks || "",
+  ]);
+
+  const projects = Array.isArray(payload.projects_being_handeled)
+    ? payload.projects_being_handeled
+    : [];
+  const usedProjects = projects.filter(function (r) {
+    return (
+      String(r.project_name || "").trim() ||
+      String(r.pcode || "").trim() ||
+      String(r.details_of_project || "").trim() ||
+      String(r.important_docs_docx_link || "").trim() ||
+      String(r.important_docs_pdf_link || "").trim() ||
+      String(r.critical_points || "").trim() ||
+      String(r.new_contact_person_name || "").trim()
+    );
+  });
+
+  usedProjects.forEach(function (row, index) {
+    detailSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.project_name || "",
+      row.pcode || "",
+      row.details_of_project || "",
+      row.important_docs_docx_link || "",
+      row.important_docs_pdf_link || "",
+      row.critical_points || "",
+      row.new_contact_person_name || "",
+    ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF04",
+    pcode: "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF04",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF04Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF04(payload) {
+  const missing = [];
+
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Employee Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.employee_first_name || "").trim())
+    missing.push("Employee First Name");
+  if (!String(payload.employee_last_name || "").trim())
+    missing.push("Employee Last Name");
+  if (!String(payload.team_head_email || "").trim())
+    missing.push("Team Head Email ID");
+
+  const projects = Array.isArray(payload.projects_being_handeled)
+    ? payload.projects_being_handeled
+    : [];
+  const usedProjects = projects.filter(function (r) {
+    return (
+      String(r.project_name || "").trim() ||
+      String(r.pcode || "").trim() ||
+      String(r.details_of_project || "").trim() ||
+      String(r.important_docs_docx_link || "").trim() ||
+      String(r.important_docs_pdf_link || "").trim() ||
+      String(r.critical_points || "").trim() ||
+      String(r.new_contact_person_name || "").trim()
+    );
+  });
+
+  if (!usedProjects.length) {
+    missing.push("Details of Projects being handeled");
+  } else {
+    usedProjects.forEach(function (row, index) {
+      if (!String(row.project_name || "").trim())
+        missing.push(`Project Name (row ${index + 1})`);
+      if (!String(row.pcode || "").trim())
+        missing.push(`PCode (row ${index + 1})`);
+      if (!String(row.details_of_project || "").trim())
+        missing.push(`Details of project (row ${index + 1})`);
+      if (!String(row.important_docs_docx_link || "").trim())
+        missing.push(`Important documents Docx link (row ${index + 1})`);
+      if (!String(row.important_docs_pdf_link || "").trim())
+        missing.push(`Important documents PDF link (row ${index + 1})`);
+      if (!String(row.new_contact_person_name || "").trim())
+        missing.push(`New contact person for project (row ${index + 1})`);
+    });
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitADM05(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateADM05(payload);
+
+  const mainSheet = db.getSheetByName("ADM05_main");
+  const detailSheet = db.getSheetByName("ADM05_travel_details");
+
+  if (!mainSheet) throw new Error("Missing sheet: ADM05_main");
+  if (!detailSheet) throw new Error("Missing sheet: ADM05_travel_details");
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.project_name || "",
+    payload.pcode || "",
+    payload.purpose_of_travel || "",
+    payload.purpose_of_travel_other || "",
+    payload.visit_start_date || "",
+    payload.visit_end_date || "",
+    payload.travel_in_scope_of || "",
+    payload.total_ticket_amount || "",
+    payload.lodging_food_in_scope_of || "",
+    payload.total_hotel_amount || "",
+    payload.remarks || "",
+  ]);
+
+  const legs = [
+    { key: "onward", data: payload.onward || {} },
+    { key: "return", data: payload.return || {} },
+  ];
+
+  legs.forEach(function (leg) {
+    const d = leg.data || {};
+
+    const row = [
+      submissionId,
+      leg.key === "onward" ? "Onward" : "Return",
+      d.date_of_travel || "",
+      d.name_of_person_travelling || "",
+      d.source_city_name || "",
+      d.destination_city_name || "",
+      d.mode_of_travel || "",
+      d.airline_name || "",
+      d.flight_number || "",
+      d.departure_terminal || "",
+      d.departure_time || "",
+      d.arrival_time || "",
+      d.excess_baggage_required || "",
+      d.ticket_price_per_person || "",
+      d.train_name_and_number || "",
+      d.departure_railway_station_name_and_code || "",
+      d.arrival_railway_station_name_and_code || "",
+      d.train_departure_time || "",
+      d.train_arrival_time || "",
+      d.bus_service_provider_name || "",
+      d.bus_departure_point || "",
+      d.bus_departure_time || "",
+      d.bus_arrival_time || "",
+      d.bus_ticket_price_per_person || "",
+    ];
+
+    if (leg.key === "onward") {
+      row.push(
+        d.hotel_booking_required || "",
+        d.check_in_date || "",
+        d.check_out_date || "",
+        d.occupancy || "",
+        d.preferred_hotel_name || "",
+        d.tariff_per_night || "",
+      );
+    } else {
+      row.push("", "", "", "", "", "");
+    }
+
+    detailSheet.appendRow(row);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "ADM05",
+    pcode: payload.pcode || "",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "ADM05",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendADM05Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateADM05(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Email Id of the requestor");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.project_name || "").trim()) missing.push("Project Name");
+  if (!String(payload.pcode || "").trim()) missing.push("Project Code");
+  if (!String(payload.purpose_of_travel || "").trim())
+    missing.push("Purpose of travel");
+  if (!String(payload.visit_start_date || "").trim())
+    missing.push("Visit Start Date");
+  if (!String(payload.visit_end_date || "").trim())
+    missing.push("Visit End Date");
+  if (!String(payload.travel_in_scope_of || "").trim())
+    missing.push("Travel in scope of");
+  if (!String(payload.total_ticket_amount || "").trim())
+    missing.push("Total Amount for ticket booking (To & Fro)");
+  if (!String(payload.lodging_food_in_scope_of || "").trim())
+    missing.push("Lodging/ Food in scope of");
+  if (!String(payload.total_hotel_amount || "").trim())
+    missing.push("Total amount for Hotel booking");
+
+  if (
+    payload.purpose_of_travel === "Others" &&
+    !String(payload.purpose_of_travel_other || "").trim()
+  ) {
+    missing.push("If Others (Pls specify)");
+  }
+
+  function validateLeg(legLabel, leg) {
+    const d = leg || {};
+
+    if (!String(d.date_of_travel || "").trim())
+      missing.push(`${legLabel} - Date of travel`);
+    if (!String(d.name_of_person_travelling || "").trim())
+      missing.push(`${legLabel} - Name of person travelling`);
+    if (!String(d.source_city_name || "").trim())
+      missing.push(`${legLabel} - Source city name`);
+    if (!String(d.destination_city_name || "").trim())
+      missing.push(`${legLabel} - Destination city name`);
+    if (!String(d.mode_of_travel || "").trim())
+      missing.push(`${legLabel} - Mode of travel`);
+
+    const mode = String(d.mode_of_travel || "").toLowerCase();
+
+    if (mode === "air") {
+      if (!String(d.airline_name || "").trim())
+        missing.push(`${legLabel} - Airline name`);
+      if (!String(d.flight_number || "").trim())
+        missing.push(`${legLabel} - Flight number`);
+      if (!String(d.departure_terminal || "").trim())
+        missing.push(`${legLabel} - Departure terminal`);
+      if (!String(d.departure_time || "").trim())
+        missing.push(`${legLabel} - Departure time`);
+      if (!String(d.arrival_time || "").trim())
+        missing.push(`${legLabel} - Arrival time`);
+      if (!String(d.excess_baggage_required || "").trim())
+        missing.push(`${legLabel} - Whether excess baggage required`);
+      if (!String(d.ticket_price_per_person || "").trim())
+        missing.push(`${legLabel} - Ticket price per person`);
+    }
+
+    if (mode === "train") {
+      if (!String(d.train_name_and_number || "").trim())
+        missing.push(`${legLabel} - Train name and number`);
+      if (!String(d.departure_railway_station_name_and_code || "").trim())
+        missing.push(`${legLabel} - Departure railway station name and code`);
+      if (!String(d.arrival_railway_station_name_and_code || "").trim())
+        missing.push(`${legLabel} - Arrival railway station and code`);
+      if (!String(d.train_departure_time || "").trim())
+        missing.push(`${legLabel} - Departure time`);
+      if (!String(d.train_arrival_time || "").trim())
+        missing.push(`${legLabel} - Arrival time`);
+      if (!String(d.ticket_price_per_person || "").trim())
+        missing.push(`${legLabel} - Ticket price per person`);
+    }
+
+    if (mode === "bus") {
+      if (!String(d.bus_service_provider_name || "").trim())
+        missing.push(`${legLabel} - Bus service provider name`);
+      if (!String(d.bus_departure_point || "").trim())
+        missing.push(`${legLabel} - Departure point`);
+      if (!String(d.bus_departure_time || "").trim())
+        missing.push(`${legLabel} - Departure time`);
+      if (!String(d.bus_arrival_time || "").trim())
+        missing.push(`${legLabel} - Arrival time`);
+      if (!String(d.bus_ticket_price_per_person || "").trim())
+        missing.push(`${legLabel} - Per person ticket price`);
+    }
+
+    if (String(d.hotel_booking_required || "").toLowerCase() === "yes") {
+      if (!String(d.check_in_date || "").trim())
+        missing.push(`${legLabel} - Check-in date`);
+      if (!String(d.check_out_date || "").trim())
+        missing.push(`${legLabel} - Check-out date`);
+      if (!String(d.occupancy || "").trim())
+        missing.push(`${legLabel} - Occupancy`);
+      if (!String(d.preferred_hotel_name || "").trim())
+        missing.push(`${legLabel} - Preferred hotel name`);
+      if (!String(d.tariff_per_night || "").trim())
+        missing.push(`${legLabel} - Tariff per night`);
+    }
+  }
+
+  validateLeg("Travel booking details - onward", payload.onward);
+  validateLeg("Travel booking details - return", payload.return);
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitTF18(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF18(payload);
+
+  const sheet = db.getSheetByName("TF18");
+  if (!sheet) throw new Error("Missing sheet: TF18");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.company_name || "",
+    payload.project_name || "",
+    payload.site_address_line1 || "",
+    payload.site_address_line2 || "",
+    payload.site_city || "",
+    payload.site_state || "",
+    payload.site_zipcode || "",
+    payload.site_country || "",
+    payload.pcode || "",
+    payload.contact_person_first_name || "",
+    payload.contact_person_last_name || "",
+    payload.contact_detail_of_contact_person || "",
+    payload.project_incharge_first_name || "",
+    payload.project_incharge_last_name || "",
+    payload.brief_description_of_project || "",
+    payload.baseline_season || "",
+    payload.baseline_season_other_specify || "",
+    payload.baseline_season_start_date || "",
+    payload.baseline_season_end_date || "",
+    payload.date_of_monitoring || "",
+    payload.tor_specific_requirements || "",
+    payload.socio_economy_requirements || "",
+    payload.eb_requirements || "",
+    payload.eb_requirement_specifications || "",
+    payload.eb_requirement_remark || "",
+    payload.upload_topo_sheet_link || "",
+    payload.upload_kml_file_link || "",
+    payload.upload_environmental_sensitivity_file_link || "",
+    payload.any_other_details_required_from_site || "",
+    payload.scope_of_travelling_boarding_lodging || "",
+    payload.completion_target_date || "",
+    payload.critical_parameters_if_any || "",
+    payload.sampling_plan_details_link || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF18",
+    pcode: payload.pcode || "",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF18",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF18Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF18(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim()) missing.push("Email");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.company_name || "").trim()) missing.push("Company Name");
+  if (!String(payload.project_name || "").trim())
+    missing.push("Name of the project");
+  if (!String(payload.site_address_line1 || "").trim())
+    missing.push("Site Address");
+  if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+  if (!String(payload.contact_person_first_name || "").trim())
+    missing.push("Name of contact person");
+  if (!String(payload.contact_detail_of_contact_person || "").trim())
+    missing.push("Contact detail of contact person");
+  if (!String(payload.project_incharge_first_name || "").trim())
+    missing.push("Project Incharge name");
+  if (!String(payload.brief_description_of_project || "").trim())
+    missing.push("Brief description of Project");
+  if (!String(payload.baseline_season || "").trim())
+    missing.push("Baseline / Project specific monitoring season");
+  const baselineValue = String(payload.baseline_season || "").toLowerCase();
+
+  if (baselineValue === "others") {
+    if (!String(payload.baseline_season_other_specify || "").trim()) {
+      missing.push("Baseline season specify");
+    }
+    if (!String(payload.baseline_season_start_date || "").trim()) {
+      missing.push("Baseline Season Start Date");
+    }
+    if (!String(payload.baseline_season_end_date || "").trim()) {
+      missing.push("Baseline Season End Date");
+    }
+  }
+  if (!String(payload.tor_specific_requirements || "").trim())
+    missing.push("TOR Specific Requirements");
+  if (!String(payload.socio_economy_requirements || "").trim())
+    missing.push("Socio Economy requirements");
+  if (!String(payload.eb_requirements || "").trim())
+    missing.push("EB requirements");
+  if (!String(payload.any_other_details_required_from_site || "").trim())
+    missing.push("Any other Details required from Site");
+  if (!String(payload.scope_of_travelling_boarding_lodging || "").trim())
+    missing.push("Scope of Travelling, Boarding, Lodging, etc");
+  if (!String(payload.completion_target_date || "").trim())
+    missing.push("Completion target Date");
+  if (!String(payload.critical_parameters_if_any || "").trim())
+    missing.push("Critical Parameters if any");
+  if (!String(payload.upload_kml_file_link || "").trim())
+    missing.push("Upload KML file");
+  if (!String(payload.upload_environmental_sensitivity_file_link || "").trim())
+    missing.push("Upload Environmental Sensitivity file");
+  if (!String(payload.sampling_plan_details_link || "").trim())
+    missing.push("Sampling Plan Details");
+
+  if (
+    String(payload.baseline_season || "").toLowerCase() === "others" &&
+    !String(payload.baseline_season_other_specify || "").trim()
+  ) {
+    missing.push("Baseline season specify");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitADM09(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateADM09Server(payload);
+
+  const mainSheet = db.getSheetByName("ADM09_main");
+  const peopleSheet = db.getSheetByName("ADM09_people");
+  const projectsSheet = db.getSheetByName("ADM09_projects");
+
+  if (!mainSheet) throw new Error("Missing sheet: ADM09_main");
+  if (!peopleSheet) throw new Error("Missing sheet: ADM09_people");
+  if (!projectsSheet) throw new Error("Missing sheet: ADM09_projects");
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.visit_type || "",
+    payload.state || "",
+    payload.last_visit_date || "",
+    payload.next_visit_planned_date || "",
+    payload.key_personnel_with_whom_communicated || "",
+    payload.details_of_visit || "",
+    payload.action_required_expected_update || "",
+    payload.remarks || "",
+  ]);
+
+  const peopleRows = Array.isArray(payload.people) ? payload.people : [];
+  const usedPeople = peopleRows.filter(function (r) {
+    return (
+      String(r.name_of_person || "").trim() ||
+      String(r.email_id_of_person || "").trim()
+    );
+  });
+
+  usedPeople.forEach(function (r, index) {
+    peopleSheet.appendRow([
+      submissionId,
+      index + 1,
+      r.name_of_person || "",
+      r.email_id_of_person || "",
+    ]);
+  });
+
+  const projectRows = Array.isArray(payload.projects) ? payload.projects : [];
+  const usedProjects = projectRows.filter(function (r) {
+    return String(r.project_name || "").trim() || String(r.pcode || "").trim();
+  });
+
+  usedProjects.forEach(function (r, index) {
+    projectsSheet.appendRow([
+      submissionId,
+      index + 1,
+      r.project_name || "",
+      r.pcode || "",
+    ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "ADM09",
+    pcode: firstPcodeFromADM09(payload),
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "ADM09",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendADM09Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateADM09Server(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Employee Email");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.visit_type || "").trim()) missing.push("Visit Type");
+  if (!String(payload.state || "").trim()) missing.push("State");
+  if (!String(payload.last_visit_date || "").trim())
+    missing.push("Last visit date");
+  if (!String(payload.next_visit_planned_date || "").trim())
+    missing.push("Next visit planned date");
+  if (!String(payload.key_personnel_with_whom_communicated || "").trim())
+    missing.push("Key personnel with whom we communicated in ministry");
+  if (!String(payload.details_of_visit || "").trim())
+    missing.push("Details of visit");
+  if (!String(payload.action_required_expected_update || "").trim())
+    missing.push("Action required / expected update");
+
+  const peopleRows = Array.isArray(payload.people) ? payload.people : [];
+  const usedPeople = peopleRows.filter(function (r) {
+    return (
+      String(r.name_of_person || "").trim() ||
+      String(r.email_id_of_person || "").trim()
+    );
+  });
+
+  if (!usedPeople.length) {
+    missing.push("Name email of person");
+  } else {
+    usedPeople.forEach(function (r, i) {
+      if (!String(r.name_of_person || "").trim())
+        missing.push(`Name of person (row ${i + 1})`);
+      if (!String(r.email_id_of_person || "").trim())
+        missing.push(`Email ID of person (row ${i + 1})`);
+    });
+  }
+
+  const projectRows = Array.isArray(payload.projects) ? payload.projects : [];
+  const usedProjects = projectRows.filter(function (r) {
+    return String(r.project_name || "").trim() || String(r.pcode || "").trim();
+  });
+
+  if (!usedProjects.length) {
+    missing.push("Relevant Project name / PCODE");
+  } else {
+    usedProjects.forEach(function (r, i) {
+      if (!String(r.project_name || "").trim())
+        missing.push(`Project Name (row ${i + 1})`);
+      if (!String(r.pcode || "").trim()) missing.push(`PCODE (row ${i + 1})`);
+    });
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function firstPcodeFromADM09(payload) {
+  const rows = Array.isArray(payload.projects) ? payload.projects : [];
+  for (const row of rows) {
+    if (row && String(row.pcode || "").trim()) return row.pcode;
+  }
+  return "";
 }

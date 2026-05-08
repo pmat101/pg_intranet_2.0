@@ -216,18 +216,35 @@
             <option value="existing">Existing Customer</option>
           </select>
         </div>
+
         <div class="form-group">
           <label class="form-label" for="lead-source"
             >Lead Source <span class="required">*</span></label
           >
           <select id="lead-source" required>
+            <option value="">Select</option>
             <option value="pb">Mr. Praveen Bhargava</option>
             <option value="rb">Mrs. Rachna Bhargava</option>
             <option value="nb">Dr. Nipun Bhargava</option>
             <option value="rd">Mrs. Rachna Dogra</option>
             <option value="gmk">Mr. Muthukumaran Ganpathi Narayanan</option>
             <option value="ag">Mrs. Aarti Gupta</option>
+            <option value="others">Others</option>
           </select>
+        </div>
+        <div
+          class="form-group"
+          id="lead-source-other-wrap"
+          style="display: none"
+        >
+          <label class="form-label" for="lead-source-other-specify">
+            Please specify <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            id="lead-source-other-specify"
+            placeholder="Specify lead source"
+          />
         </div>
 
         <div class="form-group">
@@ -253,6 +270,7 @@
     <script>
       window.addEventListener("DOMContentLoaded", function () {
         populateDropdowns();
+        bindLeadSourceOther();
       });
 
       function populateDropdowns() {
@@ -325,6 +343,21 @@
         return checked ? checked.value : "";
       }
 
+      function bindLeadSourceOther() {
+        const select = document.getElementById("lead-source");
+        const wrap = document.getElementById("lead-source-other-wrap");
+        const input = document.getElementById("lead-source-other-specify");
+
+        function sync() {
+          const show = String(select.value || "").toLowerCase() === "others";
+          wrap.style.display = show ? "block" : "none";
+          if (!show) input.value = "";
+        }
+
+        select.addEventListener("change", sync);
+        sync();
+      }
+
       function validateBD01A(payload) {
         const missing = [];
 
@@ -349,6 +382,12 @@
         if (!payload.pgCompany) missing.push("Perfact group company name");
         if (!payload.customerClass) missing.push("Customer Classification");
         if (!payload.leadSource) missing.push("Lead Source");
+        if (
+          String(payload.leadSource || "").toLowerCase() === "others" &&
+          !String(payload.leadSourceOtherSpecify || "").trim()
+        ) {
+          missing.push("Lead Source specify");
+        }
 
         if (
           payload.customerEmail &&
@@ -409,6 +448,9 @@
           leadSource: document.getElementById("lead-source").value,
           rfqUrl: document.getElementById("rfq-url").value,
           remarks: document.getElementById("remarks").value,
+          leadSourceOtherSpecify: document.getElementById(
+            "lead-source-other-specify",
+          ).value,
         };
 
         if (!validateBD01A(payload)) {

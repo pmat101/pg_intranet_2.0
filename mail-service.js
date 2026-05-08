@@ -219,6 +219,12 @@ function buildBD01AEmailHtml(payload, submissionId, proposalID, pcode) {
           ${row("PG Company", payload.pgCompany)}
           ${row("Customer Classification", payload.customerClass)}
           ${row("Lead Source", payload.leadSource)}
+          ${
+            payload.leadSource &&
+            String(payload.leadSource).toLowerCase() === "others"
+              ? row("Lead Source Specify", payload.leadSourceOtherSpecify)
+              : ""
+          }
           ${row("RFQ / Scope URL", payload.rfqUrl)}
           ${row("Remarks", payload.remarks)}
         </tbody>
@@ -504,7 +510,14 @@ function buildBD03EmailHtml(payload, submissionId) {
 
 function sendTF02Email(p, submissionId) {
   const to = `${p.employee_email}`;
-  const ccList = `info@perfactgroup.in, teameia@perfactgroup.in, ${buildTeamCc(p.team_name)}`;
+  const ccList = `info@perfactgroup.in, teameia@perfactgroup.in, ${buildTeamCc(p.team_name)}, ${getEmailByName(p.eia_coordinator_name || "")}, ${String(
+    p.qcc_reviewers || "",
+  )
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(getEmailByName)
+    .join(", ")}`;
   const subject = `Submission on appraisal meeting dated- ${p.meeting_date || ""} completion of Project- ${truncate(p.project_name, 42)} for ${p.meeting_type || ""} -meeting at Agenda no. ${p.agenda_number || ""} in committee- ${p.committee_name || ""}`;
   const htmlBody = buildTF02EmailHtml(p, submissionId);
 
@@ -965,9 +978,15 @@ function buildTF07EmailHtml(payload, submissionId) {
 
 function sendTF05Email(payload, submissionId) {
   const to = payload.official_email;
-  const cc = `info@perfactgroup.in, topmanagement@perfactgroup.in, vc@perfactgroup.in, paromita.das@perfactgroup.in, jasvinder.kaur@perfactgroup.in, ${getEmailByName(payload.eia_coordinator_name) || ""}, ${buildTeamCc(payload.team_name)}`;
-
-  const subject = `Your Format for Handover PPT_EAC Meeting response dated ${payload.date || ""} for ${payload.developer_company_name}, Project ${truncate(payload.project_name || "", 42)} with PCODE- ${payload.project_code || ""} at ${payload.project_location || ""} in ${payload.eac_committee || ""} has been submitted and sent for review`;
+  const cc = `info@perfactgroup.in, topmanagement@perfactgroup.in, vc@perfactgroup.in, paromita.das@perfactgroup.in, jasvinder.kaur@perfactgroup.in, ${getEmailByName(payload.eia_coordinator_name) || ""}, ${buildTeamCc(payload.team_name)}, it.wg@perfactgroup.in, ${String(
+    payload.qcc_reviewers || "",
+  )
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(getEmailByName)
+    .join(", ")}`;
+  const subject = `Handover PPT_EAC Meeting response dated ${payload.date || ""} for ${truncate(payload.developer_company_name || "", 21)}, Project ${truncate(payload.project_name || "", 21)} with PCODE- ${payload.project_code || ""} at ${truncate(payload.project_location || "", 21)} in ${truncate(payload.eac_committee || "", 21)}`;
   const htmlBody = buildTF05EmailHtml(payload, submissionId);
 
   GmailApp.sendEmail(to, subject, "HTML email required", {
@@ -1091,7 +1110,7 @@ function buildTF05EmailHtml(payload, submissionId) {
   return `
     <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
       <p>Dear ${payload.requestor_first_name} ${payload.requestor_last_name || ""},</p>
-      <p>Your Format for Handover PPT_EAC Meeting response dated ${payload.date || ""} has been submitted successfully</p>
+      <p>Your Format for Handover PPT_EAC Meeting response dated ${payload.date || ""} for ${payload.developer_company_name || ""}, Project ${payload.project_name || ""} with PCODE- ${payload.project_code || ""} at ${payload.project_location || ""} in ${payload.eac_committee || ""} has been submitted successfully</p>
 
       ${section("Basic Details", basicRows)}
       ${section("Project Details", projectRows)}
@@ -1108,9 +1127,15 @@ function sendTF06Email(payload, submissionId) {
   const cc = [
     getEmailByName(payload.eia_coordinator_name),
     getEmailByName(payload.c_level_officer_name),
-    getEmailByName(payload.qcc_reviewers),
+    String(payload.qcc_reviewers || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map(getEmailByName)
+      .join(", "),
     buildTeamCc(payload.team_name),
     "info@perfactgroup.in",
+    "topmanagement@perfactgroup.in",
   ]
     .filter(Boolean)
     .join(",");
@@ -1731,7 +1756,7 @@ function buildADM06EmailHtml(payload, submissionId) {
 function sendADM04Email(payload, submissionId) {
   const to = payload.requestor_email || "";
   const cc =
-    "accounts@perfactgroup.in, logistics@perfactgroup.in, kushalbhargava@perfactgroup.in";
+    "accounts@perfactgroup.in, logistics.wg@perfactgroup.in, budgeting.wg@perfactgroup.in, kushalbhargava@perfactgroup.in";
 
   const subject = `Vehicle Maintenance request for ${payload.vehicle_detail || ""} requiring ${payload.type_of_work || ""}`;
   const htmlBody = buildADM04EmailHtml(payload, submissionId);
@@ -1879,26 +1904,21 @@ function sendADM03Email(payload, submissionId) {
 
   const cc = [
     buildTeamCc(payload.team_name),
-    "admin@perfactgroup.in",
-    "info@perfactgroup.in",
+    "glacier@perfactgroup.in",
+    "logistics.wg@perfactgroup.in",
   ]
     .filter(Boolean)
     .join(",");
 
-  const subject = `ADM03 | Vehicle Requirement | ${payload.team_name || ""}`;
+  const subject = `Vehicle Requirement`;
 
   const htmlBody = buildADM03EmailHtml(payload, submissionId);
 
-  GmailApp.sendEmail(
-    "pranav.mathur@perfactgroup.in",
-    subject,
-    "HTML email required",
-    {
-      htmlBody: htmlBody,
-      name: "ADM03",
-      // cc: cc,
-    },
-  );
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "ADM03",
+    cc: cc,
+  });
 }
 
 function buildADM03EmailHtml(payload, submissionId) {
@@ -1997,8 +2017,8 @@ function buildADM03EmailHtml(payload, submissionId) {
   return `
     <div style="font-family:Arial,sans-serif;color:#222;">
       
-      <p>Dear Team,</p>
-      <p><b>ADM03 - Vehicle Requirement Form</b> has been submitted.</p>
+      <p>Dear Logistics WG,</p>
+      <p><b>Vehicle Requirement Form</b> has been submitted.</p>
 
       ${section("Requester Details", mainDetails)}
 
@@ -3460,7 +3480,7 @@ function buildTF17EmailHtml(payload, submissionId) {
   return `
     <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
       <p>Dear Team,</p>
-      <p>MoM published on ${payload.mom_publish_date || ""} for Appraisal Meeting for project ${truncate(payload.project_name || "", 42)} and Agenda no. ${payload.agenda_number || ""} has been submitted successfully.</p>
+      <p>MoM published on ${payload.mom_publish_date || ""} for Appraisal Meeting for project ${payload.project_name || ""} and Agenda no. ${payload.agenda_number || ""} has been submitted successfully.</p>
 
       ${section("Submission Summary", mainRows)}
 
@@ -3475,6 +3495,795 @@ function buildTF17EmailHtml(payload, submissionId) {
       </div>
 
       <p style="margin-top:18px;">Regards,<br/>TF17</p>
+    </div>
+  `;
+}
+
+function sendTF13Email(payload, submissionId) {
+  const to = `${buildTeamCc(payload.recipient_team_name)}`;
+  const ccList = `qc.council@perfactgroup.in, ${getEmailByName(payload.eia_coordinator_name)}, ${getEmailByName(payload.csuite_officer_name)}`;
+  const subject = `QCC Response for Project- ${truncate(payload.project_name || "", 42)}  with PCODE- ${payload.pcode || ""}`;
+  const htmlBody = buildTF13EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF13",
+    cc: ccList,
+  });
+}
+
+function buildTF13EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const mainRows = [
+    row("Submission ID", submissionId),
+    row("Recipient Team Name", payload.recipient_team_name || ""),
+    row("EIA Coordinator", payload.eia_coordinator_name || ""),
+    row("C-Suite officer Involved", payload.csuite_officer_name || ""),
+    row("Name of the project", payload.project_name || ""),
+    row("Company Name", payload.company_name || ""),
+    row("Location of the project", payload.location_of_project || ""),
+    row("PCODE", payload.pcode || ""),
+    row("Status/ Stage of the Case", payload.status_stage_of_case || ""),
+    row("Review Level", payload.review_levels || ""),
+    row("Level 1 Reviewer Name", payload.level1_reviewer_names || ""),
+    row("Level 1 Reviewer Remarks", payload.level1_reviewer_remarks || ""),
+    row("Level 2 Reviewer Name", payload.level2_reviewer_names || ""),
+    row("Level 2 Reviewer Remarks", payload.level2_reviewer_remarks || ""),
+    row("Level 3 Reviewer Name", payload.level3_reviewer_names || ""),
+    row("Level 3 Reviewer Remarks", payload.level3_reviewer_remarks || ""),
+    row("Review Date", payload.review_date || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  const obsHtml = function (rows, level) {
+    const safeRows = (rows || [])
+      .map(function (r, i) {
+        return `
+        <tr>
+          <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+          <td style="border:1px solid #ccc;padding:6px;">${esc(r.observation_link || "")}</td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    return `
+      <table style="border-collapse:collapse;width:100%;font-size:13px;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+            <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Observation link</th>
+          </tr>
+        </thead>
+        <tbody>${safeRows || `<tr><td colspan="2" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}</tbody>
+      </table>
+    `;
+  };
+
+  const filesReviewedRows = (payload.files_reviewed || []).filter(function (r) {
+    return (
+      String(r.type_of_document || "").trim() ||
+      String(r.document_link || "").trim()
+    );
+  });
+
+  const filesReviewedHtml = `
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Type of Documents submitted</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Document link</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${
+          filesReviewedRows.length
+            ? filesReviewedRows
+                .map(function (r, i) {
+                  return `
+                  <tr>
+                    <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+                    <td style="border:1px solid #ccc;padding:6px;">${esc(r.type_of_document || "")}</td>
+                    <td style="border:1px solid #ccc;padding:6px;">${esc(r.document_link || "")}</td>
+                  </tr>
+                `;
+                })
+                .join("")
+            : `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`
+        }
+      </tbody>
+    </table>
+  `;
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${payload.recipient_team_name} Team,</p>
+      <p>QCC Response for Project- ${payload.project_name || ""}  with PCODE- ${payload.pcode || ""} has been submitted successfully.</p>
+
+      ${section("Submission Summary", mainRows)}
+
+      ${
+        String(payload.review_levels || "").includes("Level 1")
+          ? section(
+              "Level 1",
+              [
+                row(
+                  "Level-1 Reviewer Name",
+                  payload.level1_reviewer_names || "",
+                ),
+                row(
+                  "Level-1 Reviewer Remarks",
+                  payload.level1_reviewer_remarks || "",
+                ),
+              ].join(""),
+            )
+          : ""
+      }
+
+      ${
+        String(payload.review_levels || "").includes("Level 1")
+          ? `
+        <div style="margin-top:14px;">
+          <div style="font-weight:700;margin-bottom:8px;">Level-1 Reviewer Observations</div>
+          ${obsHtml(payload.level1_observations || [], "Level 1")}
+        </div>
+      `
+          : ""
+      }
+
+      ${
+        String(payload.review_levels || "").includes("Level 2")
+          ? section(
+              "Level 2",
+              [
+                row(
+                  "Level-2 Reviewer Name",
+                  payload.level2_reviewer_names || "",
+                ),
+                row(
+                  "Level-2 Reviewer Remarks",
+                  payload.level2_reviewer_remarks || "",
+                ),
+              ].join(""),
+            )
+          : ""
+      }
+
+      ${
+        String(payload.review_levels || "").includes("Level 2")
+          ? `
+        <div style="margin-top:14px;">
+          <div style="font-weight:700;margin-bottom:8px;">Level-2 Reviewer Observations</div>
+          ${obsHtml(payload.level2_observations || [], "Level 2")}
+        </div>
+      `
+          : ""
+      }
+
+      ${
+        String(payload.review_levels || "").includes("Level 3")
+          ? section(
+              "Level 3",
+              [
+                row(
+                  "Level-3 Reviewer Name",
+                  payload.level3_reviewer_names || "",
+                ),
+                row(
+                  "Level-3 Reviewer Remarks",
+                  payload.level3_reviewer_remarks || "",
+                ),
+              ].join(""),
+            )
+          : ""
+      }
+
+      ${
+        String(payload.review_levels || "").includes("Level 3")
+          ? `
+        <div style="margin-top:14px;">
+          <div style="font-weight:700;margin-bottom:8px;">Level-3 Reviewer Observations</div>
+          ${obsHtml(payload.level3_observations || [], "Level 3")}
+        </div>
+      `
+          : ""
+      }
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Files Reviewed</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">Docs linked for review must be PDFs only.</div>
+        ${filesReviewedHtml}
+      </div>
+
+      <p style="margin-top:18px;">Regards,<br/>TF13</p>
+    </div>
+  `;
+}
+
+function sendTF04Email(payload, submissionId) {
+  const to = payload.employee_email || "";
+  const cc = `info@perfactgroup.in, ${payload.team_head_email || ""}, topmanagement@perfactgroup.in, ${buildTeamCc(payload.team_name)}`;
+
+  const subject = `Long Leave or Relieving Work handover from- ${payload.employee_first_name || ""} ${payload.employee_last_name || ""} due to- ${truncate(payload.reason_for_handover || "", 42)}`;
+  const htmlBody = buildTF04EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF04",
+    cc: cc,
+  });
+}
+
+function buildTF04EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const mainRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row("Employee Email ID", payload.employee_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row(
+      "Employee Name",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
+    ),
+    row("Designation", payload.designation || ""),
+    row("Joining Date", payload.joining_date || ""),
+    row("Leaving/Relieving Date", payload.leaving_or_relieving_date || ""),
+    row("Reason for Handover", payload.reason_for_handover || ""),
+    row(
+      "Team Head Name",
+      `${payload.team_head_first_name || ""} ${payload.team_head_last_name || ""}`.trim(),
+    ),
+    row("Team Head Email ID", payload.team_head_email || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  const projects = Array.isArray(payload.projects_being_handeled)
+    ? payload.projects_being_handeled
+    : [];
+  const usedProjects = projects.filter(function (r) {
+    return (
+      String(r.project_name || "").trim() ||
+      String(r.pcode || "").trim() ||
+      String(r.details_of_project || "").trim() ||
+      String(r.important_docs_docx_link || "").trim() ||
+      String(r.important_docs_pdf_link || "").trim() ||
+      String(r.critical_points || "").trim() ||
+      String(r.new_contact_person_name || "").trim()
+    );
+  });
+
+  const projectsRows = usedProjects.length
+    ? usedProjects
+        .map(function (r, i) {
+          return `
+          <tr>
+            <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${esc(r.project_name || "")}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${esc(r.pcode || "")}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${esc(r.details_of_project || "")}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${esc(r.important_docs_docx_link || "")}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${esc(r.important_docs_pdf_link || "")}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${esc(r.critical_points || "")}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${esc(r.new_contact_person_name || "")}</td>
+          </tr>
+        `;
+        })
+        .join("")
+    : `<tr><td colspan="8" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`;
+
+  const projectsTable = `
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Project Name</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">PCode</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Details of project</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Docx link</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">PDF link</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Critical points</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">New contact person</th>
+        </tr>
+      </thead>
+      <tbody>${projectsRows}</tbody>
+    </table>
+  `;
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${payload.employee_first_name || ""} ${payload.employee_last_name || ""},</p>
+      <p>Your Long Leave or Relieving Work handover response has been submitted successfully.</p>
+
+      ${section("Submission Summary", mainRows)}
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Details of Projects being handeled</div>
+        ${projectsTable}
+      </div>
+
+      <p style="margin-top:18px;">Regards,<br/>TF04</p>
+    </div>
+  `;
+}
+
+function sendADM05Email(payload, submissionId) {
+  const to = `logistics.wg@perfactgroup.in, budget.wg@perfactgroup.in, accreditation.wg@perfactgroup.in`;
+  const cc = `topmanagement@perfactgroup.in, arctic@perfactgroup.in, glacier@perfactgroup.in, ${payload.requestor_email || ""}, ${buildTeamCc(payload.team_name)}`;
+  const subject = `Ticket booking request for Project- ${truncate(payload.project_name || "", 42)} with PCode ${payload.pcode || ""}`;
+  const htmlBody = buildADM05EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody,
+    name: "ADM05",
+    cc,
+  });
+}
+
+function buildADM05EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function legRows(legLabel, d) {
+    const mode = String(d.mode_of_travel || "").toLowerCase();
+    const rows = [
+      row("Date of travel", d.date_of_travel || ""),
+      row("Name of person travelling", d.name_of_person_travelling || ""),
+      row("Source city name", d.source_city_name || ""),
+      row("Destination city name", d.destination_city_name || ""),
+      row("Mode of travel", d.mode_of_travel || ""),
+    ];
+
+    if (mode === "air") {
+      rows.push(
+        row("Airline name", d.airline_name || ""),
+        row("Flight number", d.flight_number || ""),
+        row("Departure terminal", d.departure_terminal || ""),
+        row("Departure time", d.departure_time || ""),
+        row("Arrival time", d.arrival_time || ""),
+        row("Whether excess baggage required", d.excess_baggage_required || ""),
+        row("Ticket price per person", d.ticket_price_per_person || ""),
+      );
+    }
+
+    if (mode === "train") {
+      rows.push(
+        row("Train name and number", d.train_name_and_number || ""),
+        row(
+          "Departure railway station name and code",
+          d.departure_railway_station_name_and_code || "",
+        ),
+        row(
+          "Arrival railway station and code",
+          d.arrival_railway_station_name_and_code || "",
+        ),
+        row("Departure time", d.train_departure_time || ""),
+        row("Arrival time", d.train_arrival_time || ""),
+        row("Ticket price per person", d.ticket_price_per_person || ""),
+      );
+    }
+
+    if (mode === "bus") {
+      rows.push(
+        row("Bus service provider name", d.bus_service_provider_name || ""),
+        row("Departure point", d.bus_departure_point || ""),
+        row("Departure time", d.bus_departure_time || ""),
+        row("Arrival time", d.bus_arrival_time || ""),
+        row("Per person ticket price", d.bus_ticket_price_per_person || ""),
+      );
+    }
+
+    if (legLabel.includes("Onward")) {
+      rows.push(row("Hotel booking required", d.hotel_booking_required || ""));
+      if (String(d.hotel_booking_required || "").toLowerCase() === "yes") {
+        rows.push(
+          row("Check-in date", d.check_in_date || ""),
+          row("Check-out date", d.check_out_date || ""),
+          row("Occupancy", d.occupancy || ""),
+          row("Preferred hotel name", d.preferred_hotel_name || ""),
+          row("Tariff per night", d.tariff_per_night || ""),
+        );
+      }
+    }
+
+    return section(legLabel, rows.join(""));
+  }
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""},</p>
+      <p>Your request for Ticket booking for Project- ${payload.project_name || ""} with PCode ${payload.pcode || ""} has been submitted successfully.</p>
+
+      ${section(
+        "Submission Summary",
+        [
+          row("Submission ID", submissionId),
+          row("Date", payload.date || ""),
+          row(
+            "Requestor Name",
+            `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+          ),
+          row("Requestor Email", payload.requestor_email || ""),
+          row("Team Name", payload.team_name || ""),
+          row("Project Name", payload.project_name || ""),
+          row("Project Code", payload.pcode || ""),
+          row("Purpose of travel", payload.purpose_of_travel || ""),
+          row("If Others (Pls specify)", payload.purpose_of_travel_other || ""),
+          row("Visit Start Date", payload.visit_start_date || ""),
+          row("Visit End Date", payload.visit_end_date || ""),
+          row("Travel in scope of", payload.travel_in_scope_of || ""),
+          row(
+            "Total Amount for ticket booking (To & Fro)",
+            payload.total_ticket_amount || "",
+          ),
+          row(
+            "Lodging/ Food in scope of",
+            payload.lodging_food_in_scope_of || "",
+          ),
+          row(
+            "Total amount for Hotel booking",
+            payload.total_hotel_amount || "",
+          ),
+          row("Remarks", payload.remarks || ""),
+        ].join(""),
+      )}
+
+      ${legRows("Travel booking details - Onward", payload.onward || {})}
+      ${legRows("Travel booking details - Return", payload.return || {})}
+
+      <p style="margin-top:18px;">Regards,<br/>ADM05</p>
+    </div>
+  `;
+}
+
+function sendTF18Email(payload, submissionId) {
+  const to = "rachna.dogra@perfactgroup.in, fountain@perfactgroup.in";
+  const cc = [buildTeamCc(payload.team_name), payload.requestor_email || ""]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `TRF for Project- ${truncate(payload.project_name || "", 42)} with PCode ${payload.pcode || ""}`;
+  const htmlBody = buildTF18EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF18",
+    cc: cc,
+  });
+}
+
+function buildTF18EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const summaryRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Requester Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requester Email", payload.requestor_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Company Name", payload.company_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("PCODE", payload.pcode || ""),
+  ].join("");
+
+  const addressRows = [
+    row("Site Address Line 1", payload.site_address_line1 || ""),
+    row("Site Address Line 2", payload.site_address_line2 || ""),
+    row("City", payload.site_city || ""),
+    row("State", payload.site_state || ""),
+    row("Zip Code", payload.site_zipcode || ""),
+    row("Country", payload.site_country || ""),
+  ].join("");
+
+  const contactRows = [
+    row(
+      "Contact Person",
+      `${payload.contact_person_first_name || ""} ${payload.contact_person_last_name || ""}`.trim(),
+    ),
+    row("Contact Detail", payload.contact_detail_of_contact_person || ""),
+    row(
+      "Project Incharge",
+      `${payload.project_incharge_first_name || ""} ${payload.project_incharge_last_name || ""}`.trim(),
+    ),
+  ].join("");
+
+  const detailsRows = [
+    row(
+      "Brief Description of Project",
+      payload.brief_description_of_project || "",
+    ),
+    row("Baseline Season", payload.baseline_season || ""),
+    row("Baseline Season Specify", payload.baseline_season_other_specify || ""),
+    row("Baseline Season Start Date", payload.baseline_season_start_date || ""),
+    row("Baseline Season End Date", payload.baseline_season_end_date || ""),
+    row("Date of Monitoring", payload.date_of_monitoring || ""),
+    row("TOR Specific Requirements", payload.tor_specific_requirements || ""),
+    row("Socio Economy Requirements", payload.socio_economy_requirements || ""),
+    row("EB Requirements", payload.eb_requirements || ""),
+    row(
+      "EB Requirement Specifications",
+      payload.eb_requirement_specifications || "",
+    ),
+    row("EB Requirement Remark", payload.eb_requirement_remark || ""),
+    row(
+      "Any other Details required from Site",
+      payload.any_other_details_required_from_site || "",
+    ),
+    row(
+      "Scope of Travelling, Boarding, Lodging, etc",
+      payload.scope_of_travelling_boarding_lodging || "",
+    ),
+    row("Completion Target Date", payload.completion_target_date || ""),
+    row("Critical Parameters if any", payload.critical_parameters_if_any || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  const docsRows = [
+    row("Upload Topo sheet", payload.upload_topo_sheet_link || ""),
+    row("Upload KML file", payload.upload_kml_file_link || ""),
+    row(
+      "Upload Environmental Sensitivity file",
+      payload.upload_environmental_sensitivity_file_link || "",
+    ),
+    row("Sampling Plan Details", payload.sampling_plan_details_link || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>TRF for Project- ${truncate(payload.project_name || "", 42)} with PCode ${payload.pcode || ""} has been submitted successfully.</p>
+
+      ${section("Submission Summary", summaryRows)}
+      ${section("Address", addressRows)}
+      ${section("Contact / Incharge", contactRows)}
+      ${section("Project Details / Requirements", detailsRows)}
+      ${section("File Links", docsRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF18</p>
+    </div>
+  `;
+}
+
+function sendADM09Email(payload, submissionId) {
+  const peopleEmails = (payload.people || [])
+    .map(function (r) {
+      return String(r.email_id_of_person || "").trim();
+    })
+    .filter(function (e) {
+      return e && e.includes("@");
+    });
+
+  const to = payload.requestor_email || peopleEmails[0] || "";
+  if (!to) throw new Error("No valid recipient email found");
+
+  const cc = Array.from(
+    new Set(
+      [
+        ...peopleEmails,
+        "bsns.assoc.wg@perfactgroup.in",
+        "ext.affairs.council@perfactgroup.in",
+        "priority.wg@perfactgroup.in",
+      ].filter(Boolean),
+    ),
+  ).join(",");
+
+  const subject = `ADM09 | Follow up responsibility | ${payload.visit_type || ""} | ${payload.state || ""}`;
+  const htmlBody = buildADM09EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "ADM09",
+    cc: cc,
+  });
+}
+
+function buildADM09EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const summaryRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Requester Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requester Email", payload.requestor_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Visit Type", payload.visit_type || ""),
+    row("State", payload.state || ""),
+    row("Last visit date", payload.last_visit_date || ""),
+    row("Next visit planned date", payload.next_visit_planned_date || ""),
+    row(
+      "Key personnel with whom communicated in ministry",
+      payload.key_personnel_with_whom_communicated || "",
+    ),
+    row("Details of visit", payload.details_of_visit || ""),
+    row(
+      "Action required / expected update",
+      payload.action_required_expected_update || "",
+    ),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  const peopleRows = (payload.people || [])
+    .filter(function (r) {
+      return (
+        String(r.name_of_person || "").trim() ||
+        String(r.email_id_of_person || "").trim()
+      );
+    })
+    .map(function (r, i) {
+      return `
+        <tr>
+          <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+          <td style="border:1px solid #ccc;padding:6px;">${esc(r.name_of_person || "")}</td>
+          <td style="border:1px solid #ccc;padding:6px;">${esc(r.email_id_of_person || "")}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  const projectRows = (payload.projects || [])
+    .filter(function (r) {
+      return (
+        String(r.project_name || "").trim() || String(r.pcode || "").trim()
+      );
+    })
+    .map(function (r, i) {
+      return `
+        <tr>
+          <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+          <td style="border:1px solid #ccc;padding:6px;">${esc(r.project_name || "")}</td>
+          <td style="border:1px solid #ccc;padding:6px;">${esc(r.pcode || "")}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>ADM09 has been submitted successfully.</p>
+
+      ${section("Submission Summary", summaryRows)}
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Name email of person</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <thead>
+            <tr>
+              <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+              <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Name of person</th>
+              <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Email ID of person</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${peopleRows || `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Relevant Project name / PCODE</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <thead>
+            <tr>
+              <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+              <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Project Name</th>
+              <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">PCODE</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${projectRows || `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:18px;">Regards,<br/>ADM09</p>
     </div>
   `;
 }

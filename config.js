@@ -691,7 +691,7 @@ function getDropdownData() {
       "Dr. Nipun Bhargava",
       "Dr. Suresh Chandra Jain",
       "Kantharaj Kempanna",
-      "Muthukumaran Ganpathi Narayana",
+      "Muthukumaran Ganpathi Narayanan",
       "Neha Aggarwal",
       "Praveen Bhargava",
       "Rachna Bhargava",
@@ -833,9 +833,12 @@ function getDropdownData() {
 
 function getNameEmailMap() {
   return {
+    "All QCC members": "qc.council@perfactgroup.in",
+    "Bidhu Bhushan Barman": "",
     "Alok Agrwal": "alok.agrwal@perfactgroup.in",
     "Dr. Anil Kumar": "dr.anilkumar@perfactgroup.in",
     "Dr. Nipun Bhargava": "nipunbhargava@perfactgroup.in",
+    "Dr. Suresh Chandra Jain": "suresh.jain@perfactgroup.in",
     "Deepika Arora": "deepika.arora@perfactgroup.in",
     "Disha Patel": "disha.patel@perfactgroup.in",
     "Kantharaj Kempanna": "kantharaj.kempanna@perfactgroup.in",
@@ -846,6 +849,7 @@ function getNameEmailMap() {
     "Praveen Bhargava": "praveenbhargava@perfactgroup.in",
     "Rachna Bhargava": "rachnabhargava@perfactgroup.in",
     "Rajneesh Kumar Maurya": "rajneesh.maurya@perfactgroup.in",
+    "Rajneesh Srivasatava": "rajneesh.srivasatava@perfactgroup.in",
     "Ramdas Atmaram Wani": "",
     "Richa Aggarwal": "richa.aggarwal@perfactgroup.in",
     "Saloni Sharma": "",
@@ -856,8 +860,6 @@ function getNameEmailMap() {
 
 function getEmailByName(name) {
   const map = getNameEmailMap();
-  const key = String(name || "")
-    .trim()
-    .toLowerCase();
+  const key = String(name || "");
   return map[key] || "";
 }
