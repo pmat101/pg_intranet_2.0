@@ -102,7 +102,7 @@
           <label class="form-label"
             >QCC Reviewer name <span class="required">*</span></label
           >
-          <div id="qcc-reviewers-wrap" class="inline-checks"></div>
+          <div id="qcc-reviewers-wrap" class="form-grid"></div>
         </div>
 
         <div class="form-group">
@@ -421,10 +421,6 @@
       const attachmentFields = [
         ["kml_with_project_boundary_url", "KML with project boundary", true],
         ["emp_slides_url", "EMP Slides", false],
-        ["ph_mom_english_url", "PH MoM (english)", false],
-        ["ph_mom_local_language_url", "PH MoM (local language)", false],
-        ["summary_of_ph_mom_url", "Summary of PH MoM", false],
-        ["compliance_of_ph_url", "Compliance of PH", false],
         ["draft_form_i_part_a_pdf_url", "Draft Form-I (part A)- PDF", false],
         [
           "draft_form_i_part_a_docx_link",
@@ -529,7 +525,6 @@
 
       window.addEventListener("DOMContentLoaded", function () {
         populateDropdowns();
-        renderQccReviewers();
         renderAttachmentFields();
         bindEvents();
       });
@@ -585,8 +580,26 @@
               data.baselineSeason || [],
               "Select",
             );
+            renderQccReviewers(data.qccReviewer || []);
           })
           .getDropdownData();
+      }
+
+      function renderQccReviewers(items) {
+        const wrap = document.getElementById("qcc-reviewers-wrap");
+        if (!wrap) return;
+
+        wrap.innerHTML = "";
+        (items || []).forEach(function (name, i) {
+          const id = "qcc_" + i;
+          const item = document.createElement("div");
+          item.className = "form-col-choice";
+          item.innerHTML = `
+            <input type="checkbox" id="${id}" name="qcc-reviewer" value="${name}">
+            <label for="${id}">${name}</label>
+          `;
+          wrap.appendChild(item);
+        });
       }
 
       function fillSelect(select, items, placeholder) {
@@ -602,21 +615,6 @@
           option.value = item;
           option.textContent = item;
           select.appendChild(option);
-        });
-      }
-
-      function renderQccReviewers() {
-        const wrap = document.getElementById("qcc-reviewers-wrap");
-        wrap.innerHTML = "";
-        qccReviewers.forEach(function (name, i) {
-          const id = "qcc_" + i;
-          const el = document.createElement("label");
-          el.className = "inline-check";
-          el.innerHTML = `
-            <input type="checkbox" id="${id}" name="qcc-reviewer" value="${name}">
-            <span>${name}</span>
-          `;
-          wrap.appendChild(el);
         });
       }
 

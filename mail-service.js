@@ -1140,7 +1140,7 @@ function sendTF06Email(payload, submissionId) {
     .filter(Boolean)
     .join(",");
 
-  const subject = `Handover Uploading documents of Project- ${truncate(payload.project_name || "", 42)} with PCODE- ${payload.project_code || ""} in- ${payload.project_location || ""}`;
+  const subject = `Handover Uploading documents of Project- ${truncate(payload.project_name || "", 21)} with PCODE- ${payload.project_code || ""} in- ${truncate(payload.project_location || "", 21)}`;
   const htmlBody = buildTF06EmailHtml(payload, submissionId);
 
   GmailApp.sendEmail(to, subject, "HTML email required", {
@@ -4284,6 +4284,448 @@ function buildADM09EmailHtml(payload, submissionId) {
       </div>
 
       <p style="margin-top:18px;">Regards,<br/>ADM09</p>
+    </div>
+  `;
+}
+
+function sendTF19Email(payload, submissionId) {
+  const to = payload.official_email || "";
+
+  // Resolve emails for every row in a sub-form by mapping the
+  // selected name through the config name -> email map.
+  function rowEmails(rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .map((r) => getEmailByName(r && r.name))
+      .filter(Boolean)
+      .join(",");
+  }
+
+  // Assistant emails are entered manually by the user in the EIA
+  // section (assistants are not in the config dropdowns).
+  function assistantEmails(rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .map((r) => String((r && r.assistant_email) || "").trim())
+      .filter(Boolean)
+      .join(",");
+  }
+
+  const cc = [
+    rowEmails(payload.eia_rows),
+    assistantEmails(payload.eia_rows),
+    rowEmails(payload.faeA_rows),
+    rowEmails(payload.faeB_rows),
+    rowEmails(payload.faa_rows),
+    rowEmails(payload.team_rows),
+    buildTeamCc(payload.team_name),
+    "logistics.wg@perfactgroup.in",
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `Initial Pages for Project- ${truncate(payload.project_name || "", 42)} with Project Code- ${payload.pcode || ""}`;
+  const htmlBody = buildTF19EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody,
+    name: "TF19",
+    cc,
+  });
+}
+
+function buildTF19EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function buildPeopleSection(title, rows, isEia) {
+    rows = Array.isArray(rows) ? rows : [];
+    const content = rows
+      .map(function (r, i) {
+        const derivedEmail = getEmailByName(r && r.name);
+        let html = row(
+          `${i + 1}. Name`,
+          `${r.name || ""}${derivedEmail ? " (" + derivedEmail + ")" : ""}`,
+        );
+        if (isEia) {
+          if (r.assistant_name)
+            html += row(`${i + 1}. Assistant Name`, r.assistant_name);
+          if (r.assistant_email)
+            html += row(`${i + 1}. Assistant Email`, r.assistant_email);
+        } else {
+          html += row(`${i + 1}. Functional Area`, r.functional_area || "");
+        }
+        return html;
+      })
+      .join("");
+    return section(title, content || row("Info", "No entries"));
+  }
+
+  const mainRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Requestor",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Official Email", payload.official_email || ""),
+    row("Client Name", payload.client_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row(
+      "Site Address",
+      [
+        payload.site_address_line1,
+        payload.site_address_line2,
+        payload.site_city,
+        payload.site_state,
+        payload.site_zipcode,
+        payload.site_country,
+      ]
+        .filter(Boolean)
+        .join(", "),
+    ),
+    row("PCODE", payload.pcode || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Sector", payload.sector || ""),
+    row("Category", payload.category || ""),
+    row("Type of Work", payload.type_of_work || ""),
+    row("EAC Name", payload.eac_name || ""),
+    row("Status/ Stage of the Case", payload.stage_of_case || ""),
+    row("Link to Project Sheet", payload.project_sheet_link || ""),
+    row("Link to KML", payload.kml_link || ""),
+    row("Target Date for review", payload.target_date_for_review || ""),
+    row(
+      "Link to the initial pages in Word format",
+      payload.initial_pages_word_link || "",
+    ),
+    row(
+      "Link to the initial pages in PDF format",
+      payload.initial_pages_pdf_link || "",
+    ),
+    row(
+      "Signed copy of Initial Pages",
+      payload.signed_copy_initial_pages_url || "",
+    ),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>Initial Pages for Project- ${payload.project_name || ""} with Project Code- ${payload.pcode || ""} has been submitted successfully.</p>
+
+      ${section("Submission Summary", mainRows)}
+      ${buildPeopleSection("1. Details of EIA Coordinators & Assistants to EIA Coordinators", payload.eia_rows, true)}
+      ${buildPeopleSection("2. Details for Category A FAEs", payload.faeA_rows, false)}
+      ${buildPeopleSection("3. Details for Category B FAEs", payload.faeB_rows, false)}
+      ${buildPeopleSection("4. Details of FAA", payload.faa_rows, false)}
+      ${buildPeopleSection("5. Details of Team members", payload.team_rows, false)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF19</p>
+    </div>
+  `;
+}
+
+function sendTF08Email(payload, submissionId) {
+  const to = `${payload.employee_email || ""}, ${buildTeamCc(payload.team_name)}`;
+  const cc = [
+    "info@perfactgroup.in",
+    "accounts@perfactgroup.in",
+    "topmanagement@perfactgroup.in",
+    "teameia@perfactgroup.in",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const milestoneLabel =
+    String(payload.milestone_achieved || "").toLowerCase() === "other"
+      ? `Other | ${payload.milestone_achieved_other || ""}`
+      : payload.milestone_achieved || "";
+
+  const subject = `Closing of Project- ${truncate(payload.project_name || "", 42)} with PCode- ${payload.project_code || ""} and Milestone achieved- ${truncate(milestoneLabel, 42)}`;
+
+  const htmlBody = buildTF08EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF08",
+    cc: cc,
+  });
+}
+
+function buildTF08EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const typeOfWorkLabel =
+    String(payload.type_of_work || "").toLowerCase() === "others"
+      ? `${payload.type_of_work} | ${payload.type_of_work_other || ""}`
+      : payload.type_of_work || "";
+
+  const milestoneLabel =
+    String(payload.milestone_achieved || "").toLowerCase() === "other"
+      ? `${payload.milestone_achieved} | ${payload.milestone_achieved_other || ""}`
+      : payload.milestone_achieved || "";
+
+  const basicRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Employee Name",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
+    ),
+    row("Employee Email", payload.employee_email || ""),
+    row("Team Name", payload.team_name || ""),
+  ].join("");
+
+  const projectRows = [
+    row("Project Name", payload.project_name || ""),
+    row("Project Code", payload.project_code || ""),
+    row(
+      "Project Proponent",
+      `${payload.project_proponent_first_name || ""} ${payload.project_proponent_last_name || ""}`.trim(),
+    ),
+    row(
+      "Proposed Project Cost (in lacs)",
+      payload.proposed_project_cost_lacs || "",
+    ),
+    row(
+      "Existing Project Cost (in lacs)",
+      payload.existing_project_cost_lacs || "",
+    ),
+    row(
+      "Project Cost after getting proposed EC (in lacs)",
+      payload.project_cost_after_proposed_ec_lacs || "",
+    ),
+    row("Plot Area (sq m)", payload.plot_area_sq_m || ""),
+    row("Built Up Area (sq m)", payload.built_up_area_sq_m || ""),
+    row("Capacity", payload.capacity || ""),
+    row("EMP Cost (in lacs) — Capital", payload.emp_cost_capital_lacs || ""),
+    row("Type of Work", typeOfWorkLabel),
+    row("Link of Project Folder", payload.project_folder_link || ""),
+  ].join("");
+
+  const milestoneRows = [
+    row("Milestone Achieved", milestoneLabel),
+    row("Parivesh Login ID", payload.parivesh_login_id || ""),
+    row("Parivesh Password", payload.parivesh_password || ""),
+    row("Proposal Number", payload.proposal_number || ""),
+    row("Appraising Committee", payload.appraising_committee || ""),
+    row("Number of EDS/ ADS generated", payload.eds_ads_count || ""),
+    row(
+      "No. of appraisal along with dates",
+      payload.appraisals_with_dates || "",
+    ),
+    row("Link of Project Sheet", payload.project_sheet_link || ""),
+  ].join("");
+
+  const torRows = [
+    row("TOR Application — PDF", payload.tor_application_pdf_link || ""),
+    row("TOR Agenda — PDF", payload.tor_agenda_pdf_link || ""),
+    row(
+      "Link to TOR Presentation — PPT",
+      payload.tor_presentation_ppt_link || "",
+    ),
+    row("TOR Presentation — PDF", payload.tor_presentation_pdf_link || ""),
+    row("TOR MOM — PDF", payload.tor_mom_pdf_link || ""),
+    row("TOR Letter — PDF", payload.tor_letter_pdf_link || ""),
+  ].join("");
+
+  const form1Rows = [
+    row("Link to Uploaded Form1(a) — DOCX", payload.form1a_docx_link || ""),
+    row("Uploaded Form1(a) — PDF", payload.form1a_pdf_link || ""),
+    row("Link to Uploaded Form1(b) — DOCX", payload.form1b_docx_link || ""),
+    row("Uploaded Form1(b) — PDF", payload.form1b_pdf_link || ""),
+    row("Link to Uploaded Form1(c) — DOCX", payload.form1c_docx_link || ""),
+    row("Uploaded Form1(c) — PDF", payload.form1c_pdf_link || ""),
+  ].join("");
+
+  const phRows = [
+    row("Public Hearing Document — PDF", payload.ph_document_pdf_link || ""),
+    row("Link to Public Hearing PPT — PPTX", payload.ph_ppt_link || ""),
+    row("Public Hearing PPT — PDF", payload.ph_ppt_pdf_link || ""),
+    row(
+      "Public Hearing Advertisement — PDF",
+      payload.ph_advertisement_pdf_link || "",
+    ),
+    row("Public Hearing MOM — PDF", payload.ph_mom_pdf_link || ""),
+  ].join("");
+
+  const eacRows = [
+    row(
+      "Link to Final EIA/EMP Submitted to EAC — DOCX",
+      payload.final_eia_emp_docx_link || "",
+    ),
+    row(
+      "Final EIA/EMP Submitted to EAC — PDF",
+      payload.final_eia_emp_pdf_link || "",
+    ),
+    row("Agenda — PDF", payload.agenda_pdf_link || ""),
+    row(
+      "Link to Circulation Documents — DOCX",
+      payload.circulation_docs_docx_link || "",
+    ),
+    row("Circulation Docs — PDF", payload.circulation_docs_pdf_link || ""),
+    row(
+      "Link to Final Master Presentation — PPT",
+      payload.final_master_presentation_ppt_link || "",
+    ),
+    row(
+      "Final Master Presentation — PDF",
+      payload.final_master_presentation_pdf_link || "",
+    ),
+    row(
+      "Final Summarised Presentation — PDF",
+      payload.final_summarised_presentation_pdf_link || "",
+    ),
+    row(
+      "Post EAC Appraisal Submittals — PDF",
+      payload.post_eac_submittals_pdf_link || "",
+    ),
+    row(
+      "MOM (EAC/SEIAA/SEAC) — PDF",
+      payload.eac_seiaa_seac_mom_pdf_link || "",
+    ),
+  ].join("");
+
+  const closingRows = [
+    row(
+      "Project Completion Certificate — PDF",
+      payload.project_completion_certificate_pdf_link || "",
+    ),
+    row("Project Feedback — PDF", payload.project_feedback_pdf_link || ""),
+    row("Final EC Letter — PDF", payload.final_ec_letter_pdf_link || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${esc(payload.employee_first_name || "")} ${esc(payload.employee_last_name || "")},</p>
+      <p>Closing of Project- ${payload.project_name || ""} with PCode- ${payload.project_code || ""} and Milestone achieved- ${milestoneLabel} has been submitted successfully and sent for further processing.</p>
+
+      ${section("Submission Summary", basicRows)}
+      ${section("Project Details", projectRows)}
+      ${section("Milestone &amp; Parivesh", milestoneRows)}
+      ${section("ToR Documents", torRows)}
+      ${section("Form 1(a), 1(b), 1(c)", form1Rows)}
+      ${section("Public Hearing", phRows)}
+      ${section("EAC / SEAC Appraisal", eacRows)}
+      ${section("Closing Documents", closingRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF08</p>
+    </div>
+  `;
+}
+
+function sendTF26Email(payload, submissionId) {
+  const to = "upstream@perfactgroup.in, editorial.wg@perfactgroup.in";
+  const cc = `${payload.requestor_email}, ${buildTeamCc(payload.team_name)}, kushalbhargava@perfactgroup.in`;
+
+  const subject = `Plagiarism check requested for Project- ${truncate(payload.project_name || "", 42)} with PCODE- ${payload.project_code || ""}`;
+  const htmlBody = buildTF26EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF26",
+    cc: cc,
+  });
+}
+
+function buildTF26EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const basicRows = [
+    row("Submission ID", submissionId),
+    row(
+      "Requestor Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requestor Email", payload.requestor_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Company Name", payload.company_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("PCODE", payload.project_code || ""),
+    row("Category", payload.category || ""),
+    row("Sector", payload.sector || ""),
+    row("EAC Name", payload.eac_name || ""),
+  ].join("");
+
+  const linkRows = [
+    row("Link to EIA MS Word file", payload.eia_word_link || ""),
+    row("Link to EIA Google Doc file", payload.eia_gdoc_link || ""),
+    row("Link to EIA PDF file", payload.eia_pdf_link || ""),
+    row(
+      "Link to EIA Single File with Annexure",
+      payload.eia_single_file_with_annexure_link || "",
+    ),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>Plagiarism check requested for Project- ${esc(payload.project_name || "")} with PCODE- ${esc(payload.project_code || "")}.</p>
+
+      ${section("Submission Summary", basicRows)}
+      ${section("EIA Document Links", linkRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF26</p>
     </div>
   `;
 }

@@ -4737,3 +4737,388 @@ function firstPcodeFromADM09(payload) {
   }
   return "";
 }
+
+function submitTF19(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF19(payload);
+
+  const mainSheet = db.getSheetByName("TF19_main");
+  const eiaSheet = db.getSheetByName("TF19_eia_coordinators");
+  const faeASheet = db.getSheetByName("TF19_fae_catA");
+  const faeBSheet = db.getSheetByName("TF19_fae_catB");
+  const faaSheet = db.getSheetByName("TF19_faa");
+  const teamSheet = db.getSheetByName("TF19_team_members");
+  if (!mainSheet) throw new Error("Missing sheet: TF19_main");
+  if (!eiaSheet) throw new Error("Missing sheet: TF19_eia_coordinators");
+  if (!faeASheet) throw new Error("Missing sheet: TF19_fae_catA");
+  if (!faeBSheet) throw new Error("Missing sheet: TF19_fae_catB");
+  if (!faaSheet) throw new Error("Missing sheet: TF19_faa");
+  if (!teamSheet) throw new Error("Missing sheet: TF19_team_members");
+
+  appendObjectRow(
+    mainSheet,
+    {
+      date: payload.date || "",
+      requestor_first_name: payload.requestor_first_name || "",
+      requestor_last_name: payload.requestor_last_name || "",
+      official_email: payload.official_email || "",
+      client_name: payload.client_name || "",
+      project_name: payload.project_name || "",
+      site_address_line1: payload.site_address_line1 || "",
+      site_address_line2: payload.site_address_line2 || "",
+      site_city: payload.site_city || "",
+      site_state: payload.site_state || "",
+      site_zipcode: payload.site_zipcode || "",
+      site_country: payload.site_country || "",
+      pcode: payload.pcode || "",
+      team_name: payload.team_name || "",
+      sector: payload.sector || "",
+      category: payload.category || "",
+      type_of_work: payload.type_of_work || "",
+      eac_name: payload.eac_name || "",
+      stage_of_case: payload.stage_of_case || "",
+      project_sheet_link: payload.project_sheet_link || "",
+      kml_link: payload.kml_link || "",
+      target_date_for_review: payload.target_date_for_review || "",
+      initial_pages_word_link: payload.initial_pages_word_link || "",
+      initial_pages_pdf_link: payload.initial_pages_pdf_link || "",
+      signed_copy_initial_pages_url:
+        payload.signed_copy_initial_pages_url || "",
+      remarks: payload.remarks || "",
+    },
+    { submissionId, createdBy: payload.official_email || "", now },
+  );
+
+  appendRowsFromArray(eiaSheet, payload.eia_rows || [], {
+    submissionId,
+    createdBy: payload.official_email || "",
+    now,
+  });
+  appendRowsFromArray(faeASheet, payload.faeA_rows || [], {
+    submissionId,
+    createdBy: payload.official_email || "",
+    now,
+  });
+  appendRowsFromArray(faeBSheet, payload.faeB_rows || [], {
+    submissionId,
+    createdBy: payload.official_email || "",
+    now,
+  });
+  appendRowsFromArray(faaSheet, payload.faa_rows || [], {
+    submissionId,
+    createdBy: payload.official_email || "",
+    now,
+  });
+  appendRowsFromArray(teamSheet, payload.team_rows || [], {
+    submissionId,
+    createdBy: payload.official_email || "",
+    now,
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId,
+    formCode: "TF19",
+    pcode: payload.pcode || "",
+    createdBy: payload.official_email || "",
+    now,
+    payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId,
+    formCode: "TF19",
+    createdBy: payload.official_email || "",
+    now,
+    payload,
+  });
+
+  sendTF19Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF19(payload) {
+  const missing = [];
+  if (!String(payload.official_email || "").trim())
+    missing.push("Official Email ID of requestor");
+  if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+
+  checkTF19PeopleRows(
+    payload.eia_rows,
+    "Details of EIA Coordinators & Assistants to EIA Coordinators",
+    true,
+    missing,
+  );
+  checkTF19PeopleRows(
+    payload.faeA_rows,
+    "Details for Category A FAEs",
+    false,
+    missing,
+  );
+  checkTF19PeopleRows(
+    payload.faeB_rows,
+    "Details for Category B FAEs",
+    false,
+    missing,
+  );
+  checkTF19PeopleRows(payload.faa_rows, "Details of FAA", false, missing);
+  checkTF19PeopleRows(
+    payload.team_rows,
+    "Details of Team members",
+    false,
+    missing,
+  );
+
+  if (missing.length) throw new Error("Please fill:\n\n" + missing.join("\n"));
+}
+
+function checkTF19PeopleRows(rows, label, isEia, missing) {
+  rows = Array.isArray(rows) ? rows : [];
+  const usable = rows.filter(
+    (r) =>
+      String(r.name || "").trim() ||
+      String(r.functional_area || "").trim() ||
+      String(r.assistant_name || "").trim() ||
+      String(r.assistant_email || "").trim(),
+  );
+  // Empty sections are allowed — no "at least one row" requirement.
+  usable.forEach(function (r, i) {
+    if (!String(r.name || "").trim())
+      missing.push(`${label} - Name (row ${i + 1})`);
+    if (!isEia) {
+      if (!String(r.functional_area || "").trim())
+        missing.push(`${label} - Functional Area (row ${i + 1})`);
+    }
+  });
+}
+
+function submitTF08(payload) {
+  const db = getDB();
+  const sheet = db.getSheetByName("TF08");
+  if (!sheet) throw new Error("Missing sheet: TF08");
+
+  payload = payload || {};
+  validateTF08(payload);
+
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+  payload.submission_id = submissionId;
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.employee_email || "",
+    payload.team_name || "",
+    payload.project_name || "",
+    payload.project_code || "",
+    payload.project_proponent_first_name || "",
+    payload.project_proponent_last_name || "",
+    payload.proposed_project_cost_lacs || "",
+    payload.existing_project_cost_lacs || "",
+    payload.project_cost_after_proposed_ec_lacs || "",
+    payload.plot_area_sq_m || "",
+    payload.built_up_area_sq_m || "",
+    payload.capacity || "",
+    payload.emp_cost_capital_lacs || "",
+    payload.type_of_work || "",
+    payload.type_of_work_other || "",
+    payload.project_folder_link || "",
+    payload.milestone_achieved || "",
+    payload.milestone_achieved_other || "",
+    payload.parivesh_login_id || "",
+    payload.parivesh_password || "",
+    payload.proposal_number || "",
+    payload.appraising_committee || "",
+    payload.eds_ads_count || "",
+    payload.appraisals_with_dates || "",
+    payload.project_sheet_link || "",
+    payload.tor_application_pdf_link || "",
+    payload.tor_agenda_pdf_link || "",
+    payload.tor_presentation_ppt_link || "",
+    payload.tor_presentation_pdf_link || "",
+    payload.tor_mom_pdf_link || "",
+    payload.tor_letter_pdf_link || "",
+    payload.form1a_docx_link || "",
+    payload.form1a_pdf_link || "",
+    payload.form1b_docx_link || "",
+    payload.form1b_pdf_link || "",
+    payload.form1c_docx_link || "",
+    payload.form1c_pdf_link || "",
+    payload.ph_document_pdf_link || "",
+    payload.ph_ppt_link || "",
+    payload.ph_ppt_pdf_link || "",
+    payload.ph_advertisement_pdf_link || "",
+    payload.ph_mom_pdf_link || "",
+    payload.final_eia_emp_docx_link || "",
+    payload.final_eia_emp_pdf_link || "",
+    payload.agenda_pdf_link || "",
+    payload.circulation_docs_docx_link || "",
+    payload.circulation_docs_pdf_link || "",
+    payload.final_master_presentation_ppt_link || "",
+    payload.final_master_presentation_pdf_link || "",
+    payload.final_summarised_presentation_pdf_link || "",
+    payload.post_eac_submittals_pdf_link || "",
+    payload.eac_seiaa_seac_mom_pdf_link || "",
+    payload.project_completion_certificate_pdf_link || "",
+    payload.project_feedback_pdf_link || "",
+    payload.final_ec_letter_pdf_link || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF08",
+    pcode: payload.project_code || "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF08",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF08Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF08(payload) {
+  const missing = [];
+
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Employee Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.project_code || "").trim()) missing.push("Project Code");
+  if (!String(payload.parivesh_login_id || "").trim())
+    missing.push("Parivesh Login ID");
+
+  if (
+    String(payload.type_of_work || "").toLowerCase() === "others" &&
+    !String(payload.type_of_work_other || "").trim()
+  ) {
+    missing.push("Type of Work — pls specify");
+  }
+
+  if (
+    String(payload.milestone_achieved || "").toLowerCase() === "other" &&
+    !String(payload.milestone_achieved_other || "").trim()
+  ) {
+    missing.push("Milestone Achieved — pls specify");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitTF26(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF26(payload);
+
+  const sheet = db.getSheetByName("TF26");
+  if (!sheet) throw new Error("Missing sheet: TF26");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.company_name || "",
+    payload.project_name || "",
+    payload.project_code || "",
+    payload.category || "",
+    payload.sector || "",
+    payload.eac_name || "",
+    payload.eia_word_link || "",
+    payload.eia_gdoc_link || "",
+    payload.eia_pdf_link || "",
+    payload.eia_single_file_with_annexure_link || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF26",
+    pcode: payload.project_code || "",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF26",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF26Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF26(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Official Email ID of Requestor");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.project_name || "").trim())
+    missing.push("Name of the Project");
+  if (!String(payload.project_code || "").trim()) missing.push("PCODE");
+  if (!String(payload.category || "").trim()) missing.push("Category");
+  if (!String(payload.sector || "").trim()) missing.push("Sector");
+  if (!String(payload.eac_name || "").trim()) missing.push("EAC Name");
+  if (!String(payload.eia_word_link || "").trim())
+    missing.push("Link to EIA MS Word file");
+  if (!String(payload.eia_gdoc_link || "").trim())
+    missing.push("Link to EIA Google Doc file");
+  if (!String(payload.eia_pdf_link || "").trim())
+    missing.push("Link to EIA PDF file");
+  if (!String(payload.eia_single_file_with_annexure_link || "").trim())
+    missing.push("Link to EIA Single File with Annexure");
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
