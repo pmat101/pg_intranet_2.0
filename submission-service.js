@@ -4599,12 +4599,12 @@ function submitADM09(payload) {
     submissionId,
     now,
     payload.date || "",
-    payload.requestor_first_name || "",
-    payload.requestor_last_name || "",
-    payload.requestor_email || "",
-    payload.team_name || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.employee_email || "",
+    payload.employee_id || "",
     payload.visit_type || "",
-    payload.state || "",
+    payload.place_visited || "",
     payload.last_visit_date || "",
     payload.next_visit_planned_date || "",
     payload.key_personnel_with_whom_communicated || "",
@@ -4632,7 +4632,11 @@ function submitADM09(payload) {
 
   const projectRows = Array.isArray(payload.projects) ? payload.projects : [];
   const usedProjects = projectRows.filter(function (r) {
-    return String(r.project_name || "").trim() || String(r.pcode || "").trim();
+    return (
+      String(r.project_name || "").trim() ||
+      String(r.pcode || "").trim() ||
+      String(r.outcome_of_visit || "").trim()
+    );
   });
 
   usedProjects.forEach(function (r, index) {
@@ -4641,6 +4645,7 @@ function submitADM09(payload) {
       index + 1,
       r.project_name || "",
       r.pcode || "",
+      r.outcome_of_visit || "",
     ]);
   });
 
@@ -4648,7 +4653,7 @@ function submitADM09(payload) {
     submissionId: submissionId,
     formCode: "ADM09",
     pcode: firstPcodeFromADM09(payload),
-    createdBy: payload.requestor_email || "",
+    createdBy: payload.employee_email || "",
     now: now,
     payload: payload,
   });
@@ -4656,7 +4661,7 @@ function submitADM09(payload) {
   appendAuditLog(db, {
     submissionId: submissionId,
     formCode: "ADM09",
-    createdBy: payload.requestor_email || "",
+    createdBy: payload.employee_email || "",
     now: now,
     payload: payload,
   });
@@ -4675,11 +4680,12 @@ function submitADM09(payload) {
 function validateADM09Server(payload) {
   const missing = [];
 
-  if (!String(payload.requestor_email || "").trim())
-    missing.push("Employee Email");
-  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Email ID of Employee");
+  if (!String(payload.employee_id || "").trim()) missing.push("Employee ID");
   if (!String(payload.visit_type || "").trim()) missing.push("Visit Type");
-  if (!String(payload.state || "").trim()) missing.push("State");
+  if (!String(payload.place_visited || "").trim())
+    missing.push("Place Visited");
   if (!String(payload.last_visit_date || "").trim())
     missing.push("Last visit date");
   if (!String(payload.next_visit_planned_date || "").trim())
@@ -4712,16 +4718,22 @@ function validateADM09Server(payload) {
 
   const projectRows = Array.isArray(payload.projects) ? payload.projects : [];
   const usedProjects = projectRows.filter(function (r) {
-    return String(r.project_name || "").trim() || String(r.pcode || "").trim();
+    return (
+      String(r.project_name || "").trim() ||
+      String(r.pcode || "").trim() ||
+      String(r.outcome_of_visit || "").trim()
+    );
   });
 
   if (!usedProjects.length) {
-    missing.push("Relevant Project name / PCODE");
+    missing.push("Relevant Project Details");
   } else {
     usedProjects.forEach(function (r, i) {
       if (!String(r.project_name || "").trim())
         missing.push(`Project Name (row ${i + 1})`);
       if (!String(r.pcode || "").trim()) missing.push(`PCODE (row ${i + 1})`);
+      if (!String(r.outcome_of_visit || "").trim())
+        missing.push(`Outcome of the Visit (row ${i + 1})`);
     });
   }
 
@@ -5117,6 +5129,385 @@ function validateTF26(payload) {
     missing.push("Link to EIA PDF file");
   if (!String(payload.eia_single_file_with_annexure_link || "").trim())
     missing.push("Link to EIA Single File with Annexure");
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitTF15(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF15(payload);
+
+  const mainSheet = db.getSheetByName("TF15_main");
+  const inviteeSheet = db.getSheetByName("TF15_person_expert_invited");
+  const actionSheet = db.getSheetByName("TF15_action_points");
+
+  if (!mainSheet) throw new Error("Missing sheet: TF15_main");
+  if (!inviteeSheet)
+    throw new Error("Missing sheet: TF15_person_expert_invited");
+  if (!actionSheet) throw new Error("Missing sheet: TF15_action_points");
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.meeting_date || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.employee_email || "",
+    payload.team_name || "",
+    payload.company_name || "",
+    payload.project_name || "",
+    payload.pcode || "",
+    payload.category || "",
+    payload.eac_seac || "",
+    payload.eia_coordinator_name || "",
+    payload.mom_link || "",
+    payload.remarks || "",
+  ]);
+
+  (payload.person_expert_invited || []).forEach(function (row, index) {
+    inviteeSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.name_of_invitee || "",
+      row.email_id_of_invitee || "",
+    ]);
+  });
+
+  (payload.action_points || []).forEach(function (row, index) {
+    actionSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.actionable_point || "",
+      row.responsible_person_name || "",
+    ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF15",
+    pcode: payload.pcode || "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF15",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF15Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF15(payload) {
+  const missing = [];
+
+  if (!String(payload.meeting_date || "").trim())
+    missing.push("Date of Meeting");
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Official Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.company_name || "").trim()) missing.push("Company Name");
+  if (!String(payload.project_name || "").trim())
+    missing.push("Name of the Project");
+  if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+  if (!String(payload.eia_coordinator_name || "").trim())
+    missing.push("EIA Coordinator");
+  if (!String(payload.mom_link || "").trim()) missing.push("MoM link");
+
+  const invitees = Array.isArray(payload.person_expert_invited)
+    ? payload.person_expert_invited
+    : [];
+  const usedInvitees = invitees.filter(function (r) {
+    return (
+      String(r.name_of_invitee || "").trim() ||
+      String(r.email_id_of_invitee || "").trim()
+    );
+  });
+
+  if (!usedInvitees.length) {
+    missing.push("Person/Expert Invited");
+  } else {
+    usedInvitees.forEach(function (row, index) {
+      if (!String(row.name_of_invitee || "").trim())
+        missing.push(
+          `Person/Expert Invited - Name of Invitee (row ${index + 1})`,
+        );
+      if (!String(row.email_id_of_invitee || "").trim())
+        missing.push(
+          `Person/Expert Invited - Email ID of Invitee (row ${index + 1})`,
+        );
+    });
+  }
+
+  const actions = Array.isArray(payload.action_points)
+    ? payload.action_points
+    : [];
+  const usedActions = actions.filter(function (r) {
+    return (
+      String(r.actionable_point || "").trim() ||
+      String(r.responsible_person_name || "").trim()
+    );
+  });
+
+  if (!usedActions.length) {
+    missing.push("Action Points and responsibility");
+  } else {
+    usedActions.forEach(function (row, index) {
+      if (!String(row.actionable_point || "").trim())
+        missing.push(
+          `Action Points and responsibility - actionable point (row ${index + 1})`,
+        );
+      if (!String(row.responsible_person_name || "").trim())
+        missing.push(
+          `Action Points and responsibility - responsible person name (row ${index + 1})`,
+        );
+    });
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitTF14(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF14(payload);
+
+  const mainSheet = db.getSheetByName("TF14_main");
+  const inviteeSheet = db.getSheetByName("TF14_person_expert_invited");
+
+  if (!mainSheet) throw new Error("Missing sheet: TF14_main");
+  if (!inviteeSheet)
+    throw new Error("Missing sheet: TF14_person_expert_invited");
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.meeting_date || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.employee_email || "",
+    payload.team_name || "",
+    payload.company_name || "",
+    payload.project_name || "",
+    payload.pcode || "",
+    payload.category || "",
+    payload.eac_seac || "",
+    payload.eia_coordinator_name || "",
+    payload.level_of_coordination_meeting || "",
+    payload.agenda_of_coordination_meeting || "",
+    payload.meeting_link || "",
+  ]);
+
+  (payload.person_expert_invited || []).forEach(function (row, index) {
+    inviteeSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.name_of_invitee || "",
+      row.email_id_of_invitee || "",
+    ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF14",
+    pcode: payload.pcode || "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF14",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF14Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF14(payload) {
+  const missing = [];
+
+  if (!String(payload.meeting_date || "").trim())
+    missing.push("Date of Meeting");
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Employee Official Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.company_name || "").trim()) missing.push("Company Name");
+  if (!String(payload.project_name || "").trim())
+    missing.push("Name of the Project");
+  if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+  if (!String(payload.eia_coordinator_name || "").trim())
+    missing.push("EIA Coordinator Name");
+  if (!String(payload.level_of_coordination_meeting || "").trim())
+    missing.push("Level of Coordination Meeting");
+  if (!String(payload.agenda_of_coordination_meeting || "").trim())
+    missing.push("Agenda of Coordination Meeting");
+
+  const invitees = Array.isArray(payload.person_expert_invited)
+    ? payload.person_expert_invited
+    : [];
+  const usedInvitees = invitees.filter(function (r) {
+    return (
+      String(r.name_of_invitee || "").trim() ||
+      String(r.email_id_of_invitee || "").trim()
+    );
+  });
+
+  if (!usedInvitees.length) {
+    missing.push("Person/Expert Invited");
+  } else {
+    usedInvitees.forEach(function (row, index) {
+      if (!String(row.name_of_invitee || "").trim())
+        missing.push(
+          `Person/Expert Invited - Name of Invitee (row ${index + 1})`,
+        );
+      if (!String(row.email_id_of_invitee || "").trim())
+        missing.push(
+          `Person/Expert Invited - Email ID of Invitee (row ${index + 1})`,
+        );
+    });
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitHR03(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateHR03(payload);
+
+  const sheet = db.getSheetByName("HR03");
+  if (!sheet) throw new Error("Missing sheet: HR03");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.job_title || "",
+    payload.no_of_post || "",
+    payload.existing_staff_in_category || "",
+    payload.location || "",
+    payload.type_of_appointment || "",
+    payload.educational_qualifications_required || "",
+    payload.skills_required || "",
+    payload.experience_required || "",
+    payload.job_description || "",
+    payload.date_resource_required || "",
+    payload.vacancy_caused_due_to || "",
+    payload.internal_transfer_possible || "",
+    payload.position_approval_status || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "HR03",
+    pcode: "",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "HR03",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendHR03Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateHR03(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Requestor Email ID");
+  if (!String(payload.team_name || "").trim())
+    missing.push("Team / Department");
+  if (!String(payload.job_title || "").trim()) missing.push("Job Title");
+  if (!String(payload.no_of_post || "").trim()) missing.push("No. of Posts");
+  if (!String(payload.existing_staff_in_category || "").trim())
+    missing.push("Existing Staff in this Category");
+  if (!String(payload.location || "").trim()) missing.push("Location");
+  if (!String(payload.type_of_appointment || "").trim())
+    missing.push("Type of Appointment");
+  if (!String(payload.educational_qualifications_required || "").trim())
+    missing.push("Educational / Professional Qualifications Required");
+  if (!String(payload.skills_required || "").trim())
+    missing.push("Skills Required");
+  if (!String(payload.experience_required || "").trim())
+    missing.push("Experience Required");
+  if (!String(payload.job_description || "").trim())
+    missing.push("Job Description");
+  if (!String(payload.date_resource_required || "").trim())
+    missing.push("Date by which Resource is Required");
+  if (!String(payload.vacancy_caused_due_to || "").trim())
+    missing.push("Vacancy caused due to");
+  if (!String(payload.internal_transfer_possible || "").trim())
+    missing.push(
+      "Can vacancy be filled through internal transfers / promotion?",
+    );
+  if (!String(payload.position_approval_status || "").trim())
+    missing.push("Is Position Approved?");
 
   if (missing.length) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));

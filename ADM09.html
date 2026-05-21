@@ -47,12 +47,12 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Name of Requestor</label>
+          <label class="form-label">Name of Employee</label>
           <div class="form-row">
             <div class="form-col">
               <input
                 type="text"
-                id="requestor_first_name"
+                id="employee_first_name"
                 placeholder="First Name"
               />
               <div class="helper-text">First Name</div>
@@ -60,7 +60,7 @@
             <div class="form-col">
               <input
                 type="text"
-                id="requestor_last_name"
+                id="employee_last_name"
                 placeholder="Last Name"
               />
               <div class="helper-text">Last Name</div>
@@ -69,17 +69,17 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="requestor_email"
-            >Email ID of Requestor <span class="required">*</span></label
+          <label class="form-label" for="employee_email"
+            >Email ID of Employee <span class="required">*</span></label
           >
-          <input type="email" id="requestor_email" required />
+          <input type="email" id="employee_email" required />
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="team_name"
-            >Team Name <span class="required">*</span></label
+          <label class="form-label" for="employee_id"
+            >Employee ID <span class="required">*</span></label
           >
-          <select id="team_name" required></select>
+          <input type="text" id="employee_id" required />
         </div>
 
         <div class="form-group">
@@ -96,10 +96,10 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="state"
-            >State <span class="required">*</span></label
+          <label class="form-label" for="place_visited"
+            >Place Visited <span class="required">*</span></label
           >
-          <select id="state" required></select>
+          <input type="text" id="place_visited" required />
         </div>
 
         <div class="section-divider">Name email of person</div>
@@ -127,7 +127,7 @@
           <input type="date" id="next_visit_planned_date" required />
         </div>
 
-        <div class="section-divider">Relevant Project name / PCODE</div>
+        <div class="section-divider">Relevant Project Details</div>
         <div id="project-rows"></div>
         <div class="actions-row">
           <button type="button" class="btn-secondary" id="add-project-row">
@@ -181,8 +181,6 @@
       let isSubmitting = false;
 
       window.addEventListener("DOMContentLoaded", function () {
-        populateDropdowns();
-
         const peopleWrap = document.getElementById("people-rows");
         peopleWrap.appendChild(createPersonRow());
         document
@@ -199,40 +197,6 @@
             projectWrap.appendChild(createProjectRow());
           });
       });
-
-      function populateDropdowns() {
-        google.script.run
-          .withSuccessHandler(function (data) {
-            data = data || {};
-            fillSelect(
-              document.getElementById("team_name"),
-              data.team || [],
-              "Select",
-            );
-            fillSelect(
-              document.getElementById("state"),
-              data.state || [],
-              "Select",
-            );
-          })
-          .getDropdownData();
-      }
-
-      function fillSelect(select, items, placeholder) {
-        if (!select) return;
-        select.innerHTML = "";
-        const first = document.createElement("option");
-        first.value = "";
-        first.textContent = placeholder || "Select";
-        select.appendChild(first);
-
-        (items || []).forEach(function (item) {
-          const option = document.createElement("option");
-          option.value = item;
-          option.textContent = item;
-          select.appendChild(option);
-        });
-      }
 
       function createPersonRow() {
         const row = document.createElement("div");
@@ -274,10 +238,14 @@
               <input type="text" class="adm09-project-pcode" />
             </div>
           </div>
+          <div class="form-group" style="margin-top:10px;">
+            <label class="form-label">Outcome of the Visit</label>
+            <textarea class="adm09-project-outcome"></textarea>
+          </div>
           <div class="actions-row">
             <button type="button" class="btn-secondary adm09-remove-row">Remove</button>
           </div>
-        `;
+          `;
         row
           .querySelector(".adm09-remove-row")
           .addEventListener("click", function () {
@@ -315,20 +283,26 @@
               project_name:
                 row.querySelector(".adm09-project-name")?.value || "",
               pcode: row.querySelector(".adm09-project-pcode")?.value || "",
+              outcome_of_visit:
+                row.querySelector(".adm09-project-outcome")?.value || "",
             };
           })
           .filter(function (r) {
-            return String(r.project_name).trim() || String(r.pcode).trim();
+            return (
+              String(r.project_name).trim() ||
+              String(r.pcode).trim() ||
+              String(r.outcome_of_visit).trim()
+            );
           });
       }
 
       function validateADM09(payload) {
         const missing = [];
 
-        if (!payload.requestor_email) missing.push("Employee Email");
-        if (!payload.team_name) missing.push("Team Name");
+        if (!payload.employee_email) missing.push("Email ID of Employee");
+        if (!payload.employee_id) missing.push("Employee ID");
         if (!payload.visit_type) missing.push("Visit Type");
-        if (!payload.state) missing.push("State");
+        if (!payload.place_visited) missing.push("Place Visited");
         if (!payload.last_visit_date) missing.push("Last visit date");
         if (!payload.next_visit_planned_date)
           missing.push("Next visit planned date");
@@ -348,11 +322,13 @@
         }
 
         if (!payload.projects || !payload.projects.length) {
-          missing.push("Relevant Project name / PCODE");
+          missing.push("Relevant Project Details");
         } else {
           payload.projects.forEach(function (r, i) {
             if (!r.project_name) missing.push(`Project Name (row ${i + 1})`);
             if (!r.pcode) missing.push(`PCODE (row ${i + 1})`);
+            if (!r.outcome_of_visit)
+              missing.push(`Outcome of the Visit (row ${i + 1})`);
           });
         }
 
@@ -360,7 +336,6 @@
           alert("Please fill:\n\n" + missing.join("\n"));
           return false;
         }
-
         return true;
       }
 
@@ -373,14 +348,14 @@
 
         const payload = {
           date: document.getElementById("date").value,
-          requestor_first_name: document.getElementById("requestor_first_name")
+          employee_first_name: document.getElementById("employee_first_name")
             .value,
-          requestor_last_name: document.getElementById("requestor_last_name")
-            .value,
-          requestor_email: document.getElementById("requestor_email").value,
-          team_name: document.getElementById("team_name").value,
+          employee_last_name:
+            document.getElementById("employee_last_name").value,
+          employee_email: document.getElementById("employee_email").value,
+          employee_id: document.getElementById("employee_id").value,
           visit_type: document.getElementById("visit_type").value,
-          state: document.getElementById("state").value,
+          place_visited: document.getElementById("place_visited").value,
           people: collectPeopleRows(),
           last_visit_date: document.getElementById("last_visit_date").value,
           next_visit_planned_date: document.getElementById(

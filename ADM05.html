@@ -429,6 +429,14 @@
       }
 
       function getLegData(legKey) {
+        const mode = (
+          document.getElementById(`${legKey}_mode`).value || ""
+        ).toLowerCase();
+        const ticketPriceId =
+          mode === "train"
+            ? `${legKey}_train_ticket_price`
+            : `${legKey}_air_ticket_price`;
+
         return {
           date_of_travel: document.getElementById(`${legKey}_date_of_travel`)
             .value,
@@ -453,9 +461,7 @@
           excess_baggage_required: document.getElementById(
             `${legKey}_excess_baggage_required`,
           ).value,
-          ticket_price_per_person: document.getElementById(
-            `${legKey}_air_ticket_price`,
-          ).value,
+          ticket_price_per_person: document.getElementById(ticketPriceId).value,
           train_name_and_number: document.getElementById(
             `${legKey}_train_name_and_number`,
           ).value,

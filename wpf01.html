@@ -1040,12 +1040,19 @@
 
       let isSubmitting = false;
 
-      function submitWPF01() {
-        if (isSubmitting) return; // blocks double-clicks instantly
-        isSubmitting = true;
+      function setSubmitState(isBusy) {
         const submitBtn = document.getElementById("submitBtn");
-        submitBtn.disabled = true;
-        submitBtn.innerText = "Submitting...";
+        if (!submitBtn) return;
+
+        submitBtn.disabled = isBusy;
+        submitBtn.innerText = isBusy ? "Submitting..." : "Submit";
+        isSubmitting = isBusy;
+      }
+
+      function submitWPF01() {
+        if (isSubmitting) return;
+
+        const submitBtn = document.getElementById("submitBtn");
 
         const payload = {
           week_start: document.getElementById("start-date").value,
@@ -1084,23 +1091,23 @@
           weekly_team_details: collectWorkRows(),
         };
 
-        if (!validateWPF01(payload)) {
-          isSubmitting = false;
-          submitBtn.disabled = false;
-          submitBtn.innerText = "Submit";
+        try {
+          validateWPF01(payload);
+        } catch (err) {
+          alert(err.message || "Please fill the required fields.");
+          setSubmitState(false);
           return;
         }
 
+        setSubmitState(true);
+
         google.script.run
           .withSuccessHandler(function (res) {
-            console.log("SUCCESS HANDLER RUNNING"); // 👈 debug
             document.body.innerHTML = res.thankYouHtml;
           })
           .withFailureHandler(function (err) {
             alert("Submission failed: " + err.message);
-            isSubmitting = false;
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Submit";
+            setSubmitState(false);
           })
           .submitWPF01(payload);
       }

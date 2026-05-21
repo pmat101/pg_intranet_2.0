@@ -4129,29 +4129,17 @@ function buildTF18EmailHtml(payload, submissionId) {
 }
 
 function sendADM09Email(payload, submissionId) {
-  const peopleEmails = (payload.people || [])
-    .map(function (r) {
-      return String(r.email_id_of_person || "").trim();
-    })
-    .filter(function (e) {
-      return e && e.includes("@");
-    });
+  const to = payload.employee_email || "";
 
-  const to = payload.requestor_email || peopleEmails[0] || "";
-  if (!to) throw new Error("No valid recipient email found");
+  const cc = [
+    "bsns.assoc.wg@perfactgroup.in",
+    "ext.affairs.council@perfactgroup.in",
+    "priority.wg@perfactgroup.in",
+  ]
+    .filter(Boolean)
+    .join(",");
 
-  const cc = Array.from(
-    new Set(
-      [
-        ...peopleEmails,
-        "bsns.assoc.wg@perfactgroup.in",
-        "ext.affairs.council@perfactgroup.in",
-        "priority.wg@perfactgroup.in",
-      ].filter(Boolean),
-    ),
-  ).join(",");
-
-  const subject = `ADM09 | Follow up responsibility | ${payload.visit_type || ""} | ${payload.state || ""}`;
+  const subject = `ADM09 | Follow up responsibility | ${payload.visit_type || ""} | ${payload.place_visited || ""}`;
   const htmlBody = buildADM09EmailHtml(payload, submissionId);
 
   GmailApp.sendEmail(to, subject, "HTML email required", {
@@ -4188,13 +4176,13 @@ function buildADM09EmailHtml(payload, submissionId) {
     row("Submission ID", submissionId),
     row("Date", payload.date || ""),
     row(
-      "Requester Name",
-      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+      "Employee Name",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
     ),
-    row("Requester Email", payload.requestor_email || ""),
-    row("Team Name", payload.team_name || ""),
+    row("Employee Email", payload.employee_email || ""),
+    row("Employee ID", payload.employee_id || ""),
     row("Visit Type", payload.visit_type || ""),
-    row("State", payload.state || ""),
+    row("Place Visited", payload.place_visited || ""),
     row("Last visit date", payload.last_visit_date || ""),
     row("Next visit planned date", payload.next_visit_planned_date || ""),
     row(
@@ -4230,17 +4218,20 @@ function buildADM09EmailHtml(payload, submissionId) {
   const projectRows = (payload.projects || [])
     .filter(function (r) {
       return (
-        String(r.project_name || "").trim() || String(r.pcode || "").trim()
+        String(r.project_name || "").trim() ||
+        String(r.pcode || "").trim() ||
+        String(r.outcome_of_visit || "").trim()
       );
     })
     .map(function (r, i) {
       return `
-        <tr>
-          <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
-          <td style="border:1px solid #ccc;padding:6px;">${esc(r.project_name || "")}</td>
-          <td style="border:1px solid #ccc;padding:6px;">${esc(r.pcode || "")}</td>
-        </tr>
-      `;
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.project_name || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.pcode || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.outcome_of_visit || "")}</td>
+      </tr>
+    `;
     })
     .join("");
 
@@ -4268,17 +4259,18 @@ function buildADM09EmailHtml(payload, submissionId) {
       </div>
 
       <div style="margin-top:18px;">
-        <div style="font-weight:700;margin-bottom:8px;">Relevant Project name / PCODE</div>
+        <div style="font-weight:700;margin-bottom:8px;">Relevant Project Details</div>
         <table style="border-collapse:collapse;width:100%;font-size:13px;">
           <thead>
             <tr>
               <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
               <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Project Name</th>
               <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">PCODE</th>
+              <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Outcome of the Visit</th>
             </tr>
           </thead>
           <tbody>
-            ${projectRows || `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}
+            ${projectRows || `<tr><td colspan="4" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -4726,6 +4718,368 @@ function buildTF26EmailHtml(payload, submissionId) {
       ${section("EIA Document Links", linkRows)}
 
       <p style="margin-top:18px;">Regards,<br/>TF26</p>
+    </div>
+  `;
+}
+
+function sendTF15Email(payload, submissionId) {
+  const inviteeEmails = (payload.person_expert_invited || [])
+    .map(function (r) {
+      return String(r.email_id_of_invitee || "").trim();
+    })
+    .filter(Boolean);
+
+  const eiaCoordinatorEmail = getEmailByName(payload.eia_coordinator_name);
+
+  const to = [payload.employee_email, ...inviteeEmails]
+    .filter(Boolean)
+    .join(",");
+
+  const cc = [
+    buildTeamCc(payload.team_name),
+    eiaCoordinatorEmail,
+    "spring@perfactgroup.in",
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `MoM published for Coordination Meeting on ${payload.meeting_date || ""} for project ${truncate(payload.project_name || "", 42)} (PCODE ${payload.pcode || ""})`;
+  const htmlBody = buildTF15EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF15",
+    cc: cc,
+  });
+}
+
+function buildTF15EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const mainRows = [
+    row("Submission ID", submissionId),
+    row("Date of Meeting", payload.meeting_date || ""),
+    row(
+      "Employee Name",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
+    ),
+    row("Employee Email", payload.employee_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Company Name", payload.company_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("PCODE", payload.pcode || ""),
+    row("Category", payload.category || ""),
+    row("EAC/SEAC", payload.eac_seac || ""),
+    row("EIA Coordinator", payload.eia_coordinator_name || ""),
+    row("MoM link", payload.mom_link || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  const inviteeRows = (payload.person_expert_invited || [])
+    .map(function (r, i) {
+      return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.name_of_invitee || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.email_id_of_invitee || "")}</td>
+      </tr>
+    `;
+    })
+    .join("");
+
+  const actionRows = (payload.action_points || [])
+    .map(function (r, i) {
+      return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.actionable_point || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.responsible_person_name || "")}</td>
+      </tr>
+    `;
+    })
+    .join("");
+
+  const inviteeTable = `
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Name of Invitee</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Email ID of Invitee</th>
+        </tr>
+      </thead>
+      <tbody>${inviteeRows || `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}</tbody>
+    </table>
+  `;
+
+  const actionTable = `
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">actionable point</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">responsible person name</th>
+        </tr>
+      </thead>
+      <tbody>${actionRows || `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}</tbody>
+    </table>
+  `;
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>MoM for the Coordination Meeting held on ${payload.meeting_date || ""} for project ${payload.project_name || ""} (PCODE ${payload.pcode || ""}) has been submitted successfully.</p>
+
+      ${section("Submission Summary", mainRows)}
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Person/Expert Invited</div>
+        ${inviteeTable}
+      </div>
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Action Points and responsibility</div>
+        ${actionTable}
+      </div>
+
+      <p style="margin-top:18px;">Regards,<br/>TF15</p>
+    </div>
+  `;
+}
+
+function sendTF14Email(payload, submissionId) {
+  const inviteeEmails = (payload.person_expert_invited || [])
+    .map(function (r) {
+      return String(r.email_id_of_invitee || "").trim();
+    })
+    .filter(Boolean);
+
+  const eiaCoordinatorEmail = getEmailByName(payload.eia_coordinator_name);
+
+  const to = [payload.employee_email, ...inviteeEmails]
+    .filter(Boolean)
+    .join(",");
+
+  const cc = [buildTeamCc(payload.team_name), eiaCoordinatorEmail]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `Coordination Meeting Agenda- ${payload.agenda_of_coordination_meeting || ""} for project ${truncate(payload.project_name || "", 42)} (PCODE ${payload.pcode || ""})`;
+  const htmlBody = buildTF14EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF14",
+    cc: cc,
+  });
+}
+
+function buildTF14EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const mainRows = [
+    row("Submission ID", submissionId),
+    row("Date of Meeting", payload.meeting_date || ""),
+    row(
+      "Employee Name",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
+    ),
+    row("Employee Email", payload.employee_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Company Name", payload.company_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("PCODE", payload.pcode || ""),
+    row("Category", payload.category || ""),
+    row("EAC/SEAC", payload.eac_seac || ""),
+    row("EIA Coordinator", payload.eia_coordinator_name || ""),
+    row(
+      "Level of Coordination Meeting",
+      payload.level_of_coordination_meeting || "",
+    ),
+    row(
+      "Agenda of Coordination Meeting",
+      payload.agenda_of_coordination_meeting || "",
+    ),
+    row("Meeting Link", payload.meeting_link || ""),
+  ].join("");
+
+  const inviteeRows = (payload.person_expert_invited || [])
+    .map(function (r, i) {
+      return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;">${i + 1}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.name_of_invitee || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.email_id_of_invitee || "")}</td>
+      </tr>
+    `;
+    })
+    .join("");
+
+  const inviteeTable = `
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Name of Invitee</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">Email ID of Invitee</th>
+        </tr>
+      </thead>
+      <tbody>${inviteeRows || `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}</tbody>
+    </table>
+  `;
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>TheCoordination Meeting Agenda- ${payload.agenda_of_coordination_meeting || ""} for project ${truncate(payload.project_name || "", 42)} (PCODE ${payload.pcode || ""}) has been circulated. Please find the details below.</p>
+
+      ${section("Submission Summary", mainRows)}
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Person/Expert Invited</div>
+        ${inviteeTable}
+      </div>
+
+      <p style="margin-top:18px;">Regards,<br/>TF14</p>
+    </div>
+  `;
+}
+
+function sendHR03Email(payload, submissionId) {
+  const to = payload.requestor_email || "";
+  const cc = "priority.wg@perfactgroup.in, hr.wg@perfactgroup.in";
+
+  const subject = `Employee Requisition for ${payload.team_name || ""} team at ${payload.job_title || ""} level`;
+
+  const htmlBody = buildHR03EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "HR03",
+    cc: cc,
+  });
+}
+
+function buildHR03EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:38%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const basics = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Requestor Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requestor Email", payload.requestor_email || ""),
+    row("Team / Department", payload.team_name || ""),
+  ].join("");
+
+  const positionRows = [
+    row("Job Title", payload.job_title || ""),
+    row("No. of Posts", payload.no_of_post || ""),
+    row(
+      "Existing Staff in this Category",
+      payload.existing_staff_in_category || "",
+    ),
+    row("Location", payload.location || ""),
+    row("Type of Appointment", payload.type_of_appointment || ""),
+    row(
+      "Date by which Resource is Required",
+      payload.date_resource_required || "",
+    ),
+  ].join("");
+
+  const candidateRows = [
+    row(
+      "Educational / Professional Qualifications Required",
+      payload.educational_qualifications_required || "",
+    ),
+    row("Skills Required", payload.skills_required || ""),
+    row("Experience Required", payload.experience_required || ""),
+    row("Job Description", payload.job_description || ""),
+  ].join("");
+
+  const approvalRows = [
+    row("Vacancy caused due to", payload.vacancy_caused_due_to || ""),
+    row(
+      "Can vacancy be filled through internal transfers / promotion?",
+      payload.internal_transfer_possible || "",
+    ),
+    row("Is Position Approved?", payload.position_approval_status || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${esc(payload.requestor_first_name || "")} ${esc(payload.requestor_last_name || "")},</p>
+      <p>Your Employee Requisition for <b>${payload.team_name || ""}</b> team at <b>${payload.job_title || ""}</b> level has been submitted successfully and forwarded to the HR Working Group for review.</p>
+
+      ${section("Requestor Details", basics)}
+      ${section("Position Details", positionRows)}
+      ${section("Candidate Requirements", candidateRows)}
+      ${section("Justification & Approval", approvalRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>HR03</p>
     </div>
   `;
 }
