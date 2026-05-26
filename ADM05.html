@@ -124,6 +124,22 @@
           <input type="text" id="purpose_of_travel_other" />
         </div>
 
+        <div class="form-group">
+          <label class="form-label" for="trip_type"
+            >Trip Type <span class="required">*</span></label
+          >
+          <select id="trip_type" required>
+            <option value="">Select</option>
+            <option value="Round trip">Round trip (To &amp; Fro)</option>
+            <option value="One way">One way</option>
+          </select>
+          <div class="helper-text">
+            Select "One way" only if a return booking is not required (e.g.
+            client is arranging return, or return is by road with another team
+            member).
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-col">
             <label class="form-label" for="visit_start_date"
@@ -153,7 +169,10 @@
             </select>
           </div>
           <div class="form-col">
-            <label class="form-label" for="total_ticket_amount"
+            <label
+              class="form-label"
+              for="total_ticket_amount"
+              id="total_ticket_amount_label"
               >Total Amount for ticket booking (To &amp; Fro)
               <span class="required">*</span></label
             >
@@ -190,8 +209,10 @@
         <div class="section-divider">Travel booking details - Onward</div>
         <div id="onward-section" class="subform-card"></div>
 
-        <div class="section-divider">Travel booking details - Return</div>
-        <div id="return-section" class="subform-card"></div>
+        <div id="return-wrapper">
+          <div class="section-divider">Travel booking details - Return</div>
+          <div id="return-section" class="subform-card"></div>
+        </div>
 
         <div class="form-group">
           <label class="form-label" for="remarks">Remarks if any</label>
@@ -219,6 +240,7 @@
         renderLegSection("onward");
         renderLegSection("return");
         bindPurposeOther();
+        bindTripType();
       });
 
       function populateDropdowns() {
@@ -262,6 +284,28 @@
         }
 
         purpose.addEventListener("change", sync);
+        sync();
+      }
+
+      function bindTripType() {
+        const tripType = document.getElementById("trip_type");
+        const returnWrap = document.getElementById("return-wrapper");
+        const ticketLabel = document.getElementById(
+          "total_ticket_amount_label",
+        );
+
+        function sync() {
+          const isOneWay = String(tripType.value || "") === "One way";
+          returnWrap.style.display = isOneWay ? "none" : "block";
+
+          if (ticketLabel) {
+            ticketLabel.innerHTML = isOneWay
+              ? 'Total Amount for ticket booking (One way) <span class="required">*</span>'
+              : 'Total Amount for ticket booking (To &amp; Fro) <span class="required">*</span>';
+          }
+        }
+
+        tripType.addEventListener("change", sync);
         sync();
       }
 
@@ -579,10 +623,15 @@
         if (!payload.project_name) missing.push("Project Name");
         if (!payload.pcode) missing.push("Project Code");
         if (!payload.purpose_of_travel) missing.push("Purpose of travel");
+        if (!payload.trip_type) missing.push("Trip Type");
         if (!payload.visit_start_date) missing.push("Visit Start Date");
         if (!payload.travel_in_scope_of) missing.push("Travel in scope of");
         if (!payload.total_ticket_amount)
-          missing.push("Total Amount for ticket booking (To & Fro)");
+          missing.push(
+            payload.trip_type === "One way"
+              ? "Total Amount for ticket booking (One way)"
+              : "Total Amount for ticket booking (To & Fro)",
+          );
         if (!payload.lodging_food_in_scope_of)
           missing.push("Lodging/ Food in scope of");
 
@@ -596,9 +645,12 @@
         missing.push(
           ...validateLeg("Travel booking details - Onward", payload.onward),
         );
-        missing.push(
-          ...validateLeg("Travel booking details - Return", payload.return),
-        );
+
+        if (payload.trip_type !== "One way") {
+          missing.push(
+            ...validateLeg("Travel booking details - Return", payload.return),
+          );
+        }
 
         if (missing.length) {
           alert("Please fill:\n\n" + missing.join("\n"));
@@ -614,6 +666,8 @@
         submitBtn.disabled = true;
         submitBtn.innerText = "Submitting...";
 
+        const tripType = document.getElementById("trip_type").value;
+
         const payload = {
           date: document.getElementById("date").value,
           requestor_first_name: document.getElementById("requestor_first_name")
@@ -628,6 +682,7 @@
           purpose_of_travel_other: document.getElementById(
             "purpose_of_travel_other",
           ).value,
+          trip_type: tripType,
           visit_start_date: document.getElementById("visit_start_date").value,
           visit_end_date: document.getElementById("visit_end_date").value,
           travel_in_scope_of:
@@ -640,7 +695,7 @@
           total_hotel_amount:
             document.getElementById("total_hotel_amount").value,
           onward: getLegData("onward"),
-          return: getLegData("return"),
+          return: tripType === "One way" ? null : getLegData("return"),
           remarks: document.getElementById("remarks").value,
         };
 

@@ -1756,7 +1756,7 @@ function buildADM06EmailHtml(payload, submissionId) {
 function sendADM04Email(payload, submissionId) {
   const to = payload.requestor_email || "";
   const cc =
-    "accounts@perfactgroup.in, logistics.wg@perfactgroup.in, budgeting.wg@perfactgroup.in, kushalbhargava@perfactgroup.in";
+    "accounts@perfactgroup.in, logistics.wg@perfactgroup.in, budget.wg@perfactgroup.in, kushalbhargava@perfactgroup.in";
 
   const subject = `Vehicle Maintenance request for ${payload.vehicle_detail || ""} requiring ${payload.type_of_work || ""}`;
   const htmlBody = buildADM04EmailHtml(payload, submissionId);
@@ -3970,11 +3970,14 @@ function buildADM05EmailHtml(payload, submissionId) {
           row("Project Code", payload.pcode || ""),
           row("Purpose of travel", payload.purpose_of_travel || ""),
           row("If Others (Pls specify)", payload.purpose_of_travel_other || ""),
+          row("Trip Type", payload.trip_type || ""),
           row("Visit Start Date", payload.visit_start_date || ""),
           row("Visit End Date", payload.visit_end_date || ""),
           row("Travel in scope of", payload.travel_in_scope_of || ""),
           row(
-            "Total Amount for ticket booking (To & Fro)",
+            String(payload.trip_type || "") === "One way"
+              ? "Total Amount for ticket booking (One way)"
+              : "Total Amount for ticket booking (To & Fro)",
             payload.total_ticket_amount || "",
           ),
           row(
@@ -3990,7 +3993,11 @@ function buildADM05EmailHtml(payload, submissionId) {
       )}
 
       ${legRows("Travel booking details - Onward", payload.onward || {})}
-      ${legRows("Travel booking details - Return", payload.return || {})}
+      ${
+        String(payload.trip_type || "") === "One way"
+          ? ""
+          : legRows("Travel booking details - Return", payload.return || {})
+      }
 
       <p style="margin-top:18px;">Regards,<br/>ADM05</p>
     </div>
@@ -5080,6 +5087,493 @@ function buildHR03EmailHtml(payload, submissionId) {
       ${section("Justification & Approval", approvalRows)}
 
       <p style="margin-top:18px;">Regards,<br/>HR03</p>
+    </div>
+  `;
+}
+
+function sendFQ05Email(payload, submissionId) {
+  const to = "spring.eb@perfactgroup.in";
+  const cc = [
+    buildTeamCc(payload.team_name),
+    "spring@perfactgroup.in",
+    payload.requestor_email,
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `EB Questionnaire for Project: ${truncate(payload.project_name || "", 42)} with PCODE: ${payload.pcode || ""}`;
+  const htmlBody = buildFQ05EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "FQ05",
+    cc: cc,
+  });
+}
+
+function buildFQ05EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:35%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const typeOfDevDisplay =
+    String(payload.type_of_development || "").trim() === "Other"
+      ? `Other - ${payload.type_of_development_other || ""}`
+      : payload.type_of_development || "";
+
+  const requirementDisplay =
+    String(payload.requirement || "").trim() === "other"
+      ? `other - ${payload.requirement_other || ""}`
+      : payload.requirement || "";
+
+  const summaryRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Requester Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requester Email", payload.requestor_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Company Name", payload.company_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("PCODE", payload.pcode || ""),
+    row("Category", payload.category || ""),
+    row("Sector", payload.sector || ""),
+    row("EAC Name", payload.eac_name || ""),
+    row("Type of Development", typeOfDevDisplay),
+  ].join("");
+
+  const areaRows = [
+    row("Area of Project (m²)", payload.area_of_project_m2 || ""),
+    row("% area to be developed as green", payload.green_area_percentage || ""),
+    row(
+      "Area already green / to be developed",
+      payload.green_area_status || "",
+    ),
+    row(
+      "Existing Trees / Shrub / Grass list",
+      payload.existing_trees_shrub_grass_list || "",
+    ),
+  ].join("");
+
+  const docsRows = [
+    row(
+      "Primary Site visit data / report",
+      payload.primary_site_visit_report_url || "",
+    ),
+    row("KML file", payload.kml_file_url || ""),
+    row(
+      "Authenticated list of Flora and Fauna",
+      payload.flora_fauna_list_url || "",
+    ),
+    row("LULC map", payload.lulc_map_url || ""),
+    row("DEM", payload.dem_url || ""),
+    row("TOPO map", payload.topo_map_url || ""),
+    row("Drainage map", payload.drainage_map_url || ""),
+    row("Forest Cover map", payload.forest_cover_map_url || ""),
+    row(
+      "Moisture Conservation map",
+      payload.moisture_conservation_map_url || "",
+    ),
+    row("Fire Prone Area map", payload.fire_prone_area_map_url || ""),
+    row("Project Sheet link", payload.project_sheet_url || ""),
+    row(
+      "Other project area related maps",
+      payload.other_project_area_maps_url || "",
+    ),
+  ].join("");
+
+  const ebRows = [
+    row(
+      "Coordinate details / elevations / Chapter 2",
+      payload.coordinate_details_chapter2 || "",
+    ),
+    row(
+      "EB related TOR Point no. and details",
+      payload.eb_tor_point_details || "",
+    ),
+    row("Requirement", requirementDisplay),
+    row(
+      "Environment Sensitivity sheet link",
+      payload.environment_sensitivity_sheet_url || "",
+    ),
+    row("EB sheet link", payload.eb_sheet_url || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>EB Questionnaire for Project: ${payload.project_name || ""} with PCODE: ${payload.pcode || ""} has been submitted successfully.</p>
+
+      ${section("Submission Summary", summaryRows)}
+      ${section("Area / Site Details", areaRows)}
+      ${section("Documents / Supporting Links", docsRows)}
+      ${section("EB Details", ebRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>FQ05</p>
+    </div>
+  `;
+}
+
+function sendADM01Email(payload, submissionId) {
+  const to = "logistics.wg@perfactgroup.in, office.wg@perfactgroup.in";
+  const cc = [
+    "topmanagement@perfactgroup.in, glacier@perfactgroup.in",
+    buildTeamCc(payload.team_name),
+    payload.requestor_email || "",
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `Request for arrangements for Client visit for Project- ${truncate(payload.project_name || "", 42)} with PCode ${payload.pcode || ""}`;
+  const htmlBody = buildADM01EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "ADM01",
+    cc: cc,
+  });
+}
+
+function buildADM01EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const summaryRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Requester Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requester Email", payload.requestor_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("P Code", payload.pcode || ""),
+  ].join("");
+
+  const clientRows = [
+    row(
+      "Client Name",
+      `${payload.client_first_name || ""} ${payload.client_last_name || ""}`.trim(),
+    ),
+    row(
+      "Client Mobile Number",
+      `${payload.client_mobile_code || ""} ${payload.client_mobile_number || ""}`.trim(),
+    ),
+    row("Date of Arrival", payload.date_of_arrival || ""),
+    row("Date of Departure", payload.date_of_departure || ""),
+    row("No. of Persons Visiting", payload.no_of_persons_visiting || ""),
+    row("Purpose of Visit", payload.purpose_of_visit || ""),
+    row("Conference Room Required", payload.conference_room_required || ""),
+    row("Conference Room Dates", payload.conference_room_dates || ""),
+  ].join("");
+
+  const requirementsRows = row("Requirements", payload.requirements || "");
+
+  let hotelSection = "";
+  if (payload.hotel_booking) {
+    const h = payload.hotel_booking;
+    hotelSection = section(
+      "Hotel Booking",
+      [
+        row("Guest Name", h.guest_name || ""),
+        row("Check-in Date", h.check_in_date || ""),
+        row("Check-out Date", h.check_out_date || ""),
+        row("Payment Due By", h.payment_due_by || ""),
+      ].join(""),
+    );
+  }
+
+  let foodSection = "";
+  if (payload.food_arrangements) {
+    const f = payload.food_arrangements;
+    foodSection = section(
+      "Food Arrangements",
+      [
+        row("Meal Type", f.meal_type || ""),
+        row("Date for Food Arrangements", f.date || ""),
+        row("Number of Clients Needing Food", f.no_of_clients || ""),
+      ].join(""),
+    );
+  }
+
+  let vehicleSection = "";
+  if (payload.vehicle) {
+    const v = payload.vehicle;
+    vehicleSection = section(
+      "Vehicle",
+      [
+        row("Date of Pickup", v.pickup_date || ""),
+        row("Vehicle Requirement End Date", v.end_date || ""),
+        row("Number of Visitors", v.no_of_visitors || ""),
+        row("Pickup Time", v.pickup_time || ""),
+        row("Pickup Point", v.pickup_point || ""),
+        row("Place to Visit", v.place_to_visit || ""),
+        row("Other Details", v.other_details || ""),
+      ].join(""),
+    );
+  }
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${esc(payload.requestor_first_name || "")} ${esc(payload.requestor_last_name || "")},</p>
+      <p>Your Request for arrangements for Client visit for Project- ${payload.project_name || ""} with PCode ${payload.pcode || ""} has been submitted successfully.</p>
+
+      ${section("Submission Summary", summaryRows)}
+      ${section("Client Details", clientRows)}
+      ${section("Requirements", requirementsRows)}
+      ${hotelSection}
+      ${foodSection}
+      ${vehicleSection}
+
+      ${section("Remarks", row("Remarks", payload.remarks || ""))}
+
+      <p style="margin-top:18px;">Regards,<br/>ADM01</p>
+    </div>
+  `;
+}
+
+function sendACC03Email(payload, submissionId) {
+  const route = resolveACC03Route(payload);
+
+  const cc = [route.cc, buildTeamCc(payload.team_name), payload.requestor_email]
+    .filter(Boolean)
+    .join(",");
+
+  const urgency = String(payload.urgency || "").trim();
+  const urgencyTag = urgency === "Urgent" ? "[URGENT] " : "";
+  const approvalTag = route.tag ? `[${route.tag}] ` : "";
+  const subject =
+    urgencyTag +
+    approvalTag +
+    `Purchase Request: ${truncate(payload.item_name || "Item", 42)} - ₹${payload.estimated_amount || "0"}`;
+
+  const htmlBody = buildACC03EmailHtml(payload, submissionId, route);
+
+  GmailApp.sendEmail(route.to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "ACC03",
+    cc: cc,
+  });
+}
+
+function resolveACC03Route(payload) {
+  const accounts = "accounts@perfactgroup.in";
+  const budgetWG = "budget.wg@perfactgroup.in";
+  const govCouncil = "gov.council@perfactgroup.in";
+
+  const amount = parseFloat(payload.estimated_amount);
+  const numericOk = !isNaN(amount) && amount >= 0;
+
+  if (numericOk && amount <= 2000) {
+    return {
+      to: accounts,
+      cc: "",
+      tier: "Accounts only",
+      tag: "",
+      approver: "Accounts Team",
+      addressee: "Accounts Team",
+    };
+  }
+
+  if (numericOk && amount <= 30000) {
+    return {
+      to: budgetWG,
+      cc: accounts,
+      tier: "Budget Working Group approval required",
+      tag: "Budget WG Approval",
+      approver: "Budget Working Group",
+      addressee: "Budget Working Group",
+    };
+  }
+
+  // > 30,000 OR amount missing/invalid → Governance Council
+  return {
+    to: govCouncil,
+    cc: [budgetWG, accounts].join(","),
+    tier: "Governance Council approval required",
+    tag: "Gov Council Approval",
+    approver: "Governance Council",
+    addressee: "Governance Council",
+  };
+}
+
+function buildACC03EmailHtml(payload, submissionId, route) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ddd;padding:8px;background:#f5f7fa;font-weight:600;width:35%;">
+          ${esc(label)}
+        </td>
+        <td style="border:1px solid #ddd;padding:8px;">
+          ${esc(String(value || ""))}
+        </td>
+      </tr>
+    `;
+  }
+
+  function section(title, body) {
+    return `
+      <div style="margin-top:20px;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#2c3e50;">
+          ${esc(title)}
+        </div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>
+            ${body}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const isProject = String(payload.expense_type || "") === "Project expense";
+
+  // Format amount in Indian numbering (lakh / crore style with commas)
+  function formatINR(value) {
+    const num = parseFloat(value);
+    if (isNaN(num)) return value || "";
+    return (
+      "₹ " +
+      num.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    );
+  }
+
+  const requesterRows = [
+    row("Submission ID", submissionId),
+    row("Date of Request", payload.date || ""),
+    row(
+      "Requester Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Employee Code", payload.employee_code || ""),
+    row("Requester Email", payload.requestor_email || ""),
+    row("Team", payload.team_name || ""),
+    row("Concerned PG Company", payload.pg_company || ""),
+  ].join("");
+
+  const expenseRows = [
+    row("Expense Type", payload.expense_type || ""),
+    isProject ? row("Project Name", payload.project_name || "") : "",
+    isProject ? row("PCODE", payload.pcode || "") : "",
+  ].join("");
+
+  const itemRows = [
+    row("Item(s) Requested", payload.item_name || ""),
+    row("Category", payload.category || ""),
+    row("Total Estimated Amount", formatINR(payload.estimated_amount)),
+    row("Approval Route", route.tier || ""),
+    row("Required By", payload.required_by_date || "Not specified"),
+    row("Urgency", payload.urgency || ""),
+  ].join("");
+
+  const deliveryOther =
+    payload.delivery_location === "Other" ||
+    payload.delivery_location === "Project site"
+      ? payload.delivery_location_other || ""
+      : "";
+
+  const logisticsRowsSafe = [
+    row("Preferred Vendor", payload.preferred_vendor || "Accounts to source"),
+    row(
+      "Delivery Location",
+      deliveryOther
+        ? `${payload.delivery_location} — ${deliveryOther}`
+        : payload.delivery_location || "",
+    ),
+    row("GST / TDS Applicable", payload.gst_tds_applicable || "Not specified"),
+    row("Mode of Payment", payload.mode_of_payment || "Not specified"),
+    payload.quote_or_document_link
+      ? `<tr>
+          <td style="border:1px solid #ddd;padding:8px;background:#f5f7fa;font-weight:600;width:35%;">Quote / Document Link</td>
+          <td style="border:1px solid #ddd;padding:8px;"><a href="${esc(payload.quote_or_document_link)}">${esc(payload.quote_or_document_link)}</a></td>
+        </tr>`
+      : row("Quote / Document Link", "Not attached"),
+  ].join("");
+
+  const reasonRow = row(
+    "Reason for Purchase",
+    payload.reason_for_purchase || "",
+  );
+  const remarksSection = payload.remarks
+    ? section("Remarks", row("Remarks", payload.remarks))
+    : "";
+
+  // Approval call-to-action banner — only when approval actually needed
+  const approvalBanner =
+    route.approver !== "Accounts Team"
+      ? `<div style="margin-top:14px;padding:12px;border-left:4px solid #c0392b;background:#fdecea;font-size:13px;">
+         <b>Approval required:</b> This request needs ${esc(route.approver)} sign-off
+         before Accounts can proceed. Please reply with approval / rejection.
+       </div>`
+      : "";
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${esc(route.addressee)},</p>
+      <p>A new <b>Purchase Request</b> has been submitted${
+        String(payload.urgency || "") === "Urgent"
+          ? ' <span style="color:#c0392b;font-weight:700;">[URGENT]</span>'
+          : ""
+      }.</p>
+
+      ${approvalBanner}
+
+      ${section("Requester Details", requesterRows)}
+      ${section("Expense Classification", expenseRows)}
+      ${section("Item & Cost", itemRows)}
+      ${section("Justification", reasonRow)}
+      ${section("Vendor, Delivery & Payment", logisticsRowsSafe)}
+      ${remarksSection}
+
+      <p style="margin-top:18px;">
+        Regards,<br/>
+        <b>ACC03 — Purchase Request</b>
+      </p>
     </div>
   `;
 }

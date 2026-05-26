@@ -1018,6 +1018,9 @@ function submitTF01(payload) {
   return {
     ok: true,
     submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
   };
 }
 
@@ -4225,6 +4228,7 @@ function submitADM05(payload) {
     payload.pcode || "",
     payload.purpose_of_travel || "",
     payload.purpose_of_travel_other || "",
+    payload.trip_type || "",
     payload.visit_start_date || "",
     payload.visit_end_date || "",
     payload.travel_in_scope_of || "",
@@ -4234,10 +4238,10 @@ function submitADM05(payload) {
     payload.remarks || "",
   ]);
 
-  const legs = [
-    { key: "onward", data: payload.onward || {} },
-    { key: "return", data: payload.return || {} },
-  ];
+  const legs = [{ key: "onward", data: payload.onward || {} }];
+  if (String(payload.trip_type || "") !== "One way") {
+    legs.push({ key: "return", data: payload.return || {} });
+  }
 
   legs.forEach(function (leg) {
     const d = leg.data || {};
@@ -4323,6 +4327,7 @@ function validateADM05(payload) {
   if (!String(payload.pcode || "").trim()) missing.push("Project Code");
   if (!String(payload.purpose_of_travel || "").trim())
     missing.push("Purpose of travel");
+  if (!String(payload.trip_type || "").trim()) missing.push("Trip Type");
   if (!String(payload.visit_start_date || "").trim())
     missing.push("Visit Start Date");
   if (!String(payload.visit_end_date || "").trim())
@@ -4330,7 +4335,11 @@ function validateADM05(payload) {
   if (!String(payload.travel_in_scope_of || "").trim())
     missing.push("Travel in scope of");
   if (!String(payload.total_ticket_amount || "").trim())
-    missing.push("Total Amount for ticket booking (To & Fro)");
+    missing.push(
+      String(payload.trip_type || "") === "One way"
+        ? "Total Amount for ticket booking (One way)"
+        : "Total Amount for ticket booking (To & Fro)",
+    );
   if (!String(payload.lodging_food_in_scope_of || "").trim())
     missing.push("Lodging/ Food in scope of");
   if (!String(payload.total_hotel_amount || "").trim())
@@ -4419,7 +4428,9 @@ function validateADM05(payload) {
   }
 
   validateLeg("Travel booking details - onward", payload.onward);
-  validateLeg("Travel booking details - return", payload.return);
+  if (String(payload.trip_type || "") !== "One way") {
+    validateLeg("Travel booking details - return", payload.return);
+  }
 
   if (missing.length) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));
@@ -5508,6 +5519,478 @@ function validateHR03(payload) {
     );
   if (!String(payload.position_approval_status || "").trim())
     missing.push("Is Position Approved?");
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitFQ05(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateFQ05(payload);
+
+  const sheet = db.getSheetByName("FQ05");
+  if (!sheet) throw new Error("Missing sheet: FQ05");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.company_name || "",
+    payload.project_name || "",
+    payload.pcode || "",
+    payload.category || "",
+    payload.sector || "",
+    payload.eac_name || "",
+    payload.type_of_development || "",
+    payload.type_of_development_other || "",
+    payload.area_of_project_m2 || "",
+    payload.green_area_percentage || "",
+    payload.green_area_status || "",
+    payload.existing_trees_shrub_grass_list || "",
+    payload.flora_fauna_list_url || "",
+    payload.primary_site_visit_report_url || "",
+    payload.kml_file_url || "",
+    payload.lulc_map_url || "",
+    payload.dem_url || "",
+    payload.topo_map_url || "",
+    payload.drainage_map_url || "",
+    payload.forest_cover_map_url || "",
+    payload.moisture_conservation_map_url || "",
+    payload.fire_prone_area_map_url || "",
+    payload.project_sheet_url || "",
+    payload.other_project_area_maps_url || "",
+    payload.coordinate_details_chapter2 || "",
+    payload.eb_tor_point_details || "",
+    payload.requirement || "",
+    payload.requirement_other || "",
+    payload.environment_sensitivity_sheet_url || "",
+    payload.eb_sheet_url || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "FQ05",
+    pcode: payload.pcode || "",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "FQ05",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendFQ05Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateFQ05(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Official Email ID of Requestor");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.project_name || "").trim())
+    missing.push("Name of the project");
+  if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+  if (!String(payload.category || "").trim()) missing.push("Category");
+  if (!String(payload.sector || "").trim()) missing.push("Sector");
+  if (!String(payload.eac_name || "").trim()) missing.push("EAC Name");
+
+  if (
+    String(payload.type_of_development || "").trim() === "Other" &&
+    !String(payload.type_of_development_other || "").trim()
+  ) {
+    missing.push("If Others (Specify) - Type of Development");
+  }
+
+  [
+    ["primary_site_visit_report_url", "Primary Site visit data / report"],
+    ["kml_file_url", "KML file"],
+    ["project_sheet_url", "Project Sheet link"],
+    ["eb_sheet_url", "EB sheet link"],
+  ].forEach(function ([key, label]) {
+    if (!String(payload[key] || "").trim()) missing.push(label);
+  });
+
+  // Category-driven required uploads
+  const category = String(payload.category || "").trim();
+  const categoryUploadRules = {
+    A: [
+      ["lulc_map_url", "LULC map"],
+      ["dem_url", "DEM"],
+      ["topo_map_url", "TOPO map"],
+      ["drainage_map_url", "Drainage map"],
+      ["forest_cover_map_url", "Forest Cover map"],
+      ["moisture_conservation_map_url", "Moisture Conservation map"],
+      ["fire_prone_area_map_url", "Fire Prone Area map"],
+    ],
+    B1: [
+      ["lulc_map_url", "LULC map"],
+      ["dem_url", "DEM"],
+      ["topo_map_url", "TOPO map"],
+      ["drainage_map_url", "Drainage map"],
+      ["forest_cover_map_url", "Forest Cover map"],
+    ],
+    B2: [
+      ["lulc_map_url", "LULC map"],
+      ["dem_url", "DEM"],
+      ["topo_map_url", "TOPO map"],
+      ["drainage_map_url", "Drainage map"],
+      ["forest_cover_map_url", "Forest Cover map"],
+    ],
+  };
+
+  (categoryUploadRules[category] || []).forEach(function ([key, label]) {
+    if (!String(payload[key] || "").trim()) missing.push(label);
+  });
+
+  if (!String(payload.requirement || "").trim()) missing.push("Requirement");
+  if (
+    String(payload.requirement || "").trim() === "other" &&
+    !String(payload.requirement_other || "").trim()
+  ) {
+    missing.push("Other requirement");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitADM01(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateADM01(payload);
+
+  const mainSheet = db.getSheetByName("ADM01_main");
+  const hotelSheet = db.getSheetByName("ADM01_hotel");
+  const foodSheet = db.getSheetByName("ADM01_food");
+  const vehicleSheet = db.getSheetByName("ADM01_vehicle");
+
+  if (!mainSheet) throw new Error("Missing sheet: ADM01_main");
+  if (!hotelSheet) throw new Error("Missing sheet: ADM01_hotel");
+  if (!foodSheet) throw new Error("Missing sheet: ADM01_food");
+  if (!vehicleSheet) throw new Error("Missing sheet: ADM01_vehicle");
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.project_name || "",
+    payload.pcode || "",
+    payload.client_first_name || "",
+    payload.client_last_name || "",
+    payload.client_mobile_code || "",
+    payload.client_mobile_number || "",
+    payload.date_of_arrival || "",
+    payload.date_of_departure || "",
+    payload.no_of_persons_visiting || "",
+    payload.purpose_of_visit || "",
+    payload.conference_room_required || "",
+    payload.conference_room_dates || "",
+    payload.requirements || "",
+    payload.remarks || "",
+  ]);
+
+  if (payload.hotel_booking) {
+    const h = payload.hotel_booking;
+    hotelSheet.appendRow([
+      submissionId,
+      now,
+      payload.pcode || "",
+      h.guest_name || "",
+      h.check_in_date || "",
+      h.check_out_date || "",
+      h.payment_due_by || "",
+    ]);
+  }
+
+  if (payload.food_arrangements) {
+    const f = payload.food_arrangements;
+    foodSheet.appendRow([
+      submissionId,
+      now,
+      payload.pcode || "",
+      f.meal_type || "",
+      f.date || "",
+      f.no_of_clients || "",
+    ]);
+  }
+
+  if (payload.vehicle) {
+    const v = payload.vehicle;
+    vehicleSheet.appendRow([
+      submissionId,
+      now,
+      payload.pcode || "",
+      v.pickup_date || "",
+      v.end_date || "",
+      v.no_of_visitors || "",
+      v.pickup_time || "",
+      v.pickup_point || "",
+      v.place_to_visit || "",
+      v.other_details || "",
+    ]);
+  }
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "ADM01",
+    pcode: payload.pcode || "",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "ADM01",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendADM01Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateADM01(payload) {
+  const missing = [];
+
+  if (!String(payload.date || "").trim()) missing.push("Date");
+  if (!String(payload.requestor_first_name || "").trim())
+    missing.push("Name of Requester - First Name");
+  if (!String(payload.requestor_last_name || "").trim())
+    missing.push("Name of Requester - Last Name");
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Email of Requester");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.project_name || "").trim()) missing.push("Project Name");
+  if (!String(payload.pcode || "").trim()) missing.push("P Code");
+  if (!String(payload.client_first_name || "").trim())
+    missing.push("Client Name - First Name");
+  if (!String(payload.client_last_name || "").trim())
+    missing.push("Client Name - Last Name");
+  if (!String(payload.client_mobile_number || "").trim())
+    missing.push("Client Mobile Number");
+
+  if (
+    String(payload.conference_room_required || "").toLowerCase() === "yes" &&
+    !String(payload.conference_room_dates || "").trim()
+  ) {
+    missing.push("Conference Room dates");
+  }
+
+  if (payload.hotel_booking) {
+    const h = payload.hotel_booking;
+    if (!String(h.guest_name || "").trim())
+      missing.push("Hotel Booking - Guest Name");
+    if (!String(h.check_in_date || "").trim())
+      missing.push("Hotel Booking - Check-in Date");
+    if (!String(h.check_out_date || "").trim())
+      missing.push("Hotel Booking - Check-out Date");
+    if (!String(h.payment_due_by || "").trim())
+      missing.push("Hotel Booking - Payment Due By");
+  }
+
+  if (payload.food_arrangements) {
+    const f = payload.food_arrangements;
+    if (!String(f.meal_type || "").trim())
+      missing.push("Food Arrangements - Meal Type");
+    if (!String(f.date || "").trim()) missing.push("Food Arrangements - Date");
+    if (!String(f.no_of_clients || "").trim())
+      missing.push("Food Arrangements - Number of Clients");
+  }
+
+  if (payload.vehicle) {
+    const v = payload.vehicle;
+    if (!String(v.pickup_date || "").trim())
+      missing.push("Vehicle - Date of Pickup");
+    if (!String(v.end_date || "").trim())
+      missing.push("Vehicle - Vehicle Requirement End Date");
+    if (!String(v.no_of_visitors || "").trim())
+      missing.push("Vehicle - Number of Visitors");
+    if (!String(v.pickup_time || "").trim())
+      missing.push("Vehicle - Pickup Time");
+    if (!String(v.pickup_point || "").trim())
+      missing.push("Vehicle - Pickup Point");
+    if (!String(v.place_to_visit || "").trim())
+      missing.push("Vehicle - Place to Visit");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function submitACC03(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateACC03Server(payload);
+
+  const mainSheet = db.getSheetByName("ACC03");
+  if (!mainSheet) throw new Error("Missing sheet: ACC03");
+
+  // Office expenses must not carry project name / PCODE
+  const isProject = String(payload.expense_type || "") === "Project expense";
+  const projectName = isProject ? payload.project_name || "" : "";
+  const pcode = isProject ? payload.pcode || "" : "";
+
+  // "Other" / "Project site" specification is irrelevant for the rest
+  const deliveryOther =
+    payload.delivery_location === "Other" ||
+    payload.delivery_location === "Project site"
+      ? payload.delivery_location_other || ""
+      : "";
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.requestor_email || "",
+    payload.date || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.employee_code || "",
+    payload.team_name || "",
+    payload.pg_company || "",
+    payload.expense_type || "",
+    projectName,
+    pcode,
+    payload.item_name || "",
+    payload.category || "",
+    payload.estimated_amount || "",
+    payload.required_by_date || "",
+    payload.urgency || "",
+    payload.reason_for_purchase || "",
+    payload.preferred_vendor || "",
+    payload.delivery_location || "",
+    deliveryOther,
+    payload.gst_tds_applicable || "",
+    payload.mode_of_payment || "",
+    payload.quote_or_document_link || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "ACC03",
+    pcode: pcode,
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "ACC03",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendACC03Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateACC03Server(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_first_name || "").trim())
+    missing.push("First Name");
+  if (!String(payload.requestor_last_name || "").trim())
+    missing.push("Last Name");
+  if (!String(payload.employee_code || "").trim())
+    missing.push("Employee Code");
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Official Email ID");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.pg_company || "").trim())
+    missing.push("Concerned PG Company");
+  if (!String(payload.expense_type || "").trim())
+    missing.push("Office expense or Project expense");
+
+  if (String(payload.expense_type || "") === "Project expense") {
+    if (!String(payload.project_name || "").trim())
+      missing.push("Project Name");
+    if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+  }
+
+  if (!String(payload.item_name || "").trim()) missing.push("Item Name(s)");
+  if (!String(payload.category || "").trim())
+    missing.push("Category of Purchase");
+  if (!String(payload.estimated_amount || "").trim())
+    missing.push("Estimated Amount");
+  if (!String(payload.urgency || "").trim()) missing.push("Urgency");
+  if (!String(payload.reason_for_purchase || "").trim())
+    missing.push("Reason for Purchase");
+  if (!String(payload.delivery_location || "").trim())
+    missing.push("Delivery Location");
+
+  if (
+    (payload.delivery_location === "Other" ||
+      payload.delivery_location === "Project site") &&
+    !String(payload.delivery_location_other || "").trim()
+  ) {
+    missing.push("Specify delivery location");
+  }
+
+  // Numeric sanity for estimated_amount
+  const amt = parseFloat(payload.estimated_amount);
+  if (payload.estimated_amount && (isNaN(amt) || amt < 0)) {
+    missing.push("Estimated Amount must be a valid non-negative number");
+  }
 
   if (missing.length) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));
