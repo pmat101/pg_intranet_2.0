@@ -5577,3 +5577,327 @@ function buildACC03EmailHtml(payload, submissionId, route) {
     </div>
   `;
 }
+
+function sendACC02Email(payload, submissionId) {
+  const to = "accounts@perfactgroup.in, budget.wg@perfactgroup.in";
+
+  const cc = [buildTeamCc(payload.team_name), payload.requestor_email || ""]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `Vendor: ${truncate(payload.vendor_name || "", 42)} — Bill ${payload.bill_number || ""} dated ${payload.bill_date || ""}`;
+
+  const htmlBody = buildACC02EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "ACC02",
+    cc: cc,
+  });
+}
+
+function buildACC02EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // Indian-format currency helper (₹ + lakh/crore grouping)
+  function inr(value) {
+    const n = parseFloat(value);
+    if (isNaN(n)) return "";
+    return (
+      "₹ " +
+      n.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    );
+  }
+
+  const fullAddress = [
+    payload.address_line1,
+    payload.address_line2,
+    payload.address_city,
+    payload.address_region,
+    payload.address_zip,
+    payload.address_country,
+  ]
+    .map(function (p) {
+      return String(p || "").trim();
+    })
+    .filter(Boolean)
+    .join(", ");
+
+  const gstRegistered = String(payload.gst_registered || "");
+
+  const summaryRows = [
+    row("Submission ID", submissionId),
+    row(
+      "Requestor Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requestor Email", payload.requestor_email || ""),
+    row("Team Name", payload.team_name || ""),
+  ].join("");
+
+  const vendorRows = [
+    row("Vendor Name", payload.vendor_name || ""),
+    row("Address", fullAddress),
+    row("GST Registered", gstRegistered),
+    row(
+      "GST Number",
+      gstRegistered === "Yes" ? payload.gst_number || "" : "N/A",
+    ),
+  ].join("");
+
+  const txnRows = [
+    row("Branch", payload.branch || ""),
+    row("Reference (Email / PO)", payload.reference || ""),
+    row("Bill Number", payload.bill_number || ""),
+    row("Bill Date", payload.bill_date || ""),
+    row("Mode of Payment", payload.mode_of_payment || ""),
+    row("Target Date of Payment / Terms", payload.target_date || ""),
+    row("Invoice Copy", payload.invoice_url || ""),
+  ].join("");
+
+  // ---- Item Table ----
+  const items = Array.isArray(payload.items) ? payload.items : [];
+
+  const itemRowsHtml = items
+    .map(function (r, i) {
+      const gst = String(r.gst_percent || "");
+      return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;text-align:center;">${i + 1}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(r.item_description || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:right;">${esc(r.rate || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:right;">${esc(r.quantity || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:right;">${esc(r.amount || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:right;">${esc(gst)}${gst === "" ? "" : "%"}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:right;">${esc(r.total_amount || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:right;">${esc(r.discount || "")}</td>
+        <td style="border:1px solid #ccc;padding:6px;text-align:right;font-weight:600;">${esc(r.net_amount || "")}</td>
+      </tr>
+    `;
+    })
+    .join("");
+
+  const itemTable = `
+    <table style="border-collapse:collapse;width:100%;font-size:12px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">#</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:left;">Description / Items</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:right;">Rate (₹)</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:right;">Qty</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:right;">Amount (₹)</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:right;">GST</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:right;">Total (₹)</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:right;">Disc. (₹)</th>
+          <th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;text-align:right;">Net (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRowsHtml || `<tr><td colspan="9" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`}
+      </tbody>
+    </table>
+  `;
+
+  // Grand totals — recomputed server-side via the same helper
+  const totals = computeACC02Totals(items);
+  const totalsRows = [
+    row("Grand Amount (pre-GST)", inr(totals.grand_amount)),
+    row("Grand Total (incl. GST)", inr(totals.grand_total)),
+    row("Total Discount", inr(totals.grand_discount)),
+    row("Grand Net Amount Payable", inr(totals.grand_net)),
+  ].join("");
+
+  // Advance Payment section — show only if anything is filled
+  let advanceSection = "";
+  const hasAdvance =
+    String(payload.advance_amount || "").trim() ||
+    String(payload.advance_date || "").trim() ||
+    String(payload.advance_paid_via || "").trim();
+
+  if (hasAdvance) {
+    advanceSection = section(
+      "Advance Payment",
+      [
+        row(
+          "Amount Paid in Advance",
+          payload.advance_amount ? inr(payload.advance_amount) : "",
+        ),
+        row("Date of Advance Payment", payload.advance_date || ""),
+        row("Paid via", payload.advance_paid_via || ""),
+      ].join(""),
+    );
+  }
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Accounts Team,</p>
+      <p>
+        A new vendor bill has been submitted by
+        ${esc((payload.requestor_first_name || "") + " " + (payload.requestor_last_name || ""))}
+        for Vendor: <strong>${esc(payload.vendor_name || "")}</strong>
+        (Bill ${esc(payload.bill_number || "")} dated ${esc(payload.bill_date || "")}).
+      </p>
+
+      ${section("Submission Summary", summaryRows)}
+      ${section("Vendor Details", vendorRows)}
+      ${section("Transaction Details", txnRows)}
+
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">Item Table</div>
+        ${itemTable}
+      </div>
+
+      ${section("Totals", totalsRows)}
+      ${advanceSection}
+      ${section("Remarks", row("Remarks", payload.remarks || ""))}
+
+      <p style="margin-top:18px;">
+        This is a draft submission — requires verification and approval by
+        the Accounts Team before processing of payment.
+      </p>
+
+      <p style="margin-top:18px;">Regards,<br/>ACC02</p>
+    </div>
+  `;
+}
+
+function sendTF09Email(payload, submissionId) {
+  // Primary recipient: the submitter and the recipient team mailbox
+  const to = `${payload.employee_email}`;
+
+  // CC: the sending team, plus standard distribution
+  const cc = `${buildTeamCc(payload.from_team_name)}, ${buildTeamCc(payload.recipient_team_name)}, topmanagement@perfactgroup.in`;
+
+  const subject = `Documents shared from ${payload.from_team_name || ""} to ${payload.recipient_team_name || ""} for Project- ${truncate(payload.project_name || "", 42)} with PCODE- ${payload.project_code || ""}`;
+
+  const htmlBody = buildTF09EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "TF09",
+    // cc: cc,
+  });
+}
+
+function buildTF09EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // Combines a checkbox group's value with its "Others" specification
+  function withOther(values, otherText) {
+    const list = String(values || "").trim();
+    const extra = String(otherText || "").trim();
+    if (list && extra) return list + " (" + extra + ")";
+    if (extra) return extra;
+    return list;
+  }
+
+  const basicRows = [
+    row("Submission ID", submissionId),
+    row("Date", payload.date || ""),
+    row(
+      "Name",
+      `${payload.employee_first_name || ""} ${payload.employee_last_name || ""}`.trim(),
+    ),
+    row("Employee Email ID", payload.employee_email || ""),
+    row("From Team Name", payload.from_team_name || ""),
+    row("Recipient Team Name", payload.recipient_team_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("Project Code", payload.project_code || ""),
+    row("Baseline season", payload.baseline_season || ""),
+  ].join("");
+
+  const labRows = [
+    row(
+      "Type of Document Received from Lab",
+      withOther(payload.lab_document_types, payload.lab_document_types_other),
+    ),
+    row(
+      "Link to Documents Received from Lab",
+      payload.lab_documents_link || "",
+    ),
+  ].join("");
+
+  const faeRows = [
+    row(
+      "Type of document as FAE Report or Expert Report",
+      withOther(
+        payload.fae_expert_document_types,
+        payload.fae_expert_document_types_other,
+      ),
+    ),
+    row("Link to FAE & Expert Reports", payload.fae_expert_reports_link || ""),
+  ].join("");
+
+  const nocRows = [
+    row(
+      "Type of document from NOC Team",
+      withOther(payload.noc_document_types, payload.noc_document_types_other),
+    ),
+    row(
+      "Link to Document from Reservoir Team",
+      payload.reservoir_document_link || "",
+    ),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear ${esc(payload.employee_first_name || "")} ${esc(payload.employee_last_name || "")},</p>
+      <p>
+        Documents sharing record from <b>${esc(payload.from_team_name || "")}</b>
+        to <b>${esc(payload.recipient_team_name || "")}</b> dated
+        ${esc(payload.date || "")} has been submitted successfully.
+      </p>
+
+      ${section("Basic Details", basicRows)}
+      ${section("Documents Received from Lab", labRows)}
+      ${section("FAE / Expert Reports", faeRows)}
+      ${section("NOC Team Documents", nocRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>TF09</p>
+    </div>
+  `;
+}

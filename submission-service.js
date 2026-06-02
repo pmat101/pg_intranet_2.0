@@ -5996,3 +5996,349 @@ function validateACC03Server(payload) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));
   }
 }
+
+function submitACC02(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateACC02Server(payload);
+
+  const mainSheet = db.getSheetByName("ACC02_main");
+  const itemsSheet = db.getSheetByName("ACC02_items");
+
+  if (!mainSheet) throw new Error("Missing sheet: ACC02_main");
+  if (!itemsSheet) throw new Error("Missing sheet: ACC02_items");
+
+  // GST number only valid when GST registered = Yes
+  const gstRegistered = String(payload.gst_registered || "");
+  const gstNumber = gstRegistered === "Yes" ? payload.gst_number || "" : "";
+
+  // Address as a single, concatenated readable string for the main sheet
+  const fullAddress = [
+    payload.address_line1,
+    payload.address_line2,
+    payload.address_city,
+    payload.address_region,
+    payload.address_zip,
+    payload.address_country,
+  ]
+    .map(function (p) {
+      return String(p || "").trim();
+    })
+    .filter(Boolean)
+    .join(", ");
+
+  // Item totals — recompute server-side for the ledger
+  const totals = computeACC02Totals(payload.items || []);
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.requestor_email || "",
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.vendor_name || "",
+    fullAddress,
+    payload.address_line1 || "",
+    payload.address_line2 || "",
+    payload.address_city || "",
+    payload.address_region || "",
+    payload.address_zip || "",
+    payload.address_country || "",
+    gstRegistered,
+    gstNumber,
+    payload.branch || "",
+    payload.reference || "",
+    payload.bill_number || "",
+    payload.bill_date || "",
+    payload.mode_of_payment || "",
+    payload.target_date || "",
+    payload.invoice_url || "",
+    payload.advance_amount || "",
+    payload.advance_date || "",
+    payload.advance_paid_via || "",
+    payload.remarks || "",
+    totals.grand_amount,
+    totals.grand_total,
+    totals.grand_discount,
+    totals.grand_net,
+  ]);
+
+  // Item rows — one row per line item
+  (payload.items || []).forEach(function (row, index) {
+    itemsSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.item_description || "",
+      row.rate || "",
+      row.quantity || "",
+      row.amount || "",
+      row.gst_percent || "",
+      row.total_amount || "",
+      row.discount || "",
+      row.net_amount || "",
+    ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "ACC02",
+    pcode: "",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "ACC02",
+    createdBy: payload.requestor_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendACC02Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateACC02Server(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Official Email ID of Requestor");
+
+  if (!String(payload.vendor_name || "").trim()) missing.push("Vendor Name");
+
+  if (!String(payload.gst_registered || "").trim())
+    missing.push("GST Registered");
+
+  if (
+    String(payload.gst_registered || "") === "Yes" &&
+    !String(payload.gst_number || "").trim()
+  ) {
+    missing.push("GST Number");
+  }
+
+  if (!String(payload.bill_number || "").trim()) missing.push("Bill Number");
+  if (!String(payload.bill_date || "").trim()) missing.push("Bill Date");
+
+  if (!String(payload.invoice_url || "").trim())
+    missing.push("Invoice Copy (URL link)");
+
+  // Light URL sanity check
+  const url = String(payload.invoice_url || "").trim();
+  if (url && !/^https?:\/\//i.test(url)) {
+    missing.push(
+      "Invoice Copy (URL link) — must begin with http:// or https://",
+    );
+  }
+
+  // Item table — must have at least one row with all required values
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const usedItems = items.filter(function (r) {
+    return (
+      String(r.item_description || "").trim() ||
+      String(r.rate || "").trim() ||
+      String(r.quantity || "").trim()
+    );
+  });
+
+  if (!usedItems.length) {
+    missing.push("Item Table — add at least one item");
+  } else {
+    usedItems.forEach(function (row, index) {
+      const rn = index + 1;
+      if (!String(row.item_description || "").trim())
+        missing.push(`Item Table row ${rn} — Item Description`);
+      if (!String(row.rate || "").trim())
+        missing.push(`Item Table row ${rn} — Rate`);
+      if (!String(row.quantity || "").trim())
+        missing.push(`Item Table row ${rn} — Quantity`);
+
+      const rate = parseFloat(row.rate);
+      const qty = parseFloat(row.quantity);
+      if (row.rate && (isNaN(rate) || rate < 0))
+        missing.push(
+          `Item Table row ${rn} — Rate must be a non-negative number`,
+        );
+      if (row.quantity && (isNaN(qty) || qty < 0))
+        missing.push(
+          `Item Table row ${rn} — Quantity must be a non-negative number`,
+        );
+    });
+  }
+
+  // Advance amount sanity
+  if (payload.advance_amount) {
+    const adv = parseFloat(payload.advance_amount);
+    if (isNaN(adv) || adv < 0)
+      missing.push("Amount Paid in Advance must be a non-negative number");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function computeACC02Totals(items) {
+  let grandAmount = 0;
+  let grandTotal = 0;
+  let grandDiscount = 0;
+  let grandNet = 0;
+
+  (items || []).forEach(function (r) {
+    const rate = parseFloat(r.rate);
+    const qty = parseFloat(r.quantity);
+    const gst = parseFloat(r.gst_percent);
+    const disc = parseFloat(r.discount);
+
+    const amount = (isNaN(rate) ? 0 : rate) * (isNaN(qty) ? 0 : qty);
+    const total = amount + ((isNaN(gst) ? 0 : gst) / 100) * amount;
+    const net = total - (isNaN(disc) ? 0 : disc);
+
+    grandAmount += amount;
+    grandTotal += total;
+    grandDiscount += isNaN(disc) ? 0 : disc;
+    grandNet += net;
+  });
+
+  function r2(v) {
+    return Math.round(v * 100) / 100;
+  }
+
+  return {
+    grand_amount: r2(grandAmount),
+    grand_total: r2(grandTotal),
+    grand_discount: r2(grandDiscount),
+    grand_net: r2(grandNet),
+  };
+}
+
+function submitTF09(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateTF09(payload);
+
+  const sheet = db.getSheetByName("TF09");
+  if (!sheet) throw new Error("Missing sheet: TF09");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.date || "",
+    payload.employee_first_name || "",
+    payload.employee_last_name || "",
+    payload.employee_email || "",
+    payload.from_team_name || "",
+    payload.recipient_team_name || "",
+    payload.project_name || "",
+    payload.project_code || "",
+    payload.baseline_season || "",
+    payload.lab_document_types || "",
+    payload.lab_document_types_other || "",
+    payload.lab_documents_link || "",
+    payload.fae_expert_document_types || "",
+    payload.fae_expert_document_types_other || "",
+    payload.fae_expert_reports_link || "",
+    payload.noc_document_types || "",
+    payload.noc_document_types_other || "",
+    payload.reservoir_document_link || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "TF09",
+    pcode: payload.project_code || "",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "TF09",
+    createdBy: payload.employee_email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendTF09Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateTF09(payload) {
+  const missing = [];
+
+  if (!String(payload.employee_email || "").trim())
+    missing.push("Employee Email ID");
+  if (!String(payload.from_team_name || "").trim())
+    missing.push("From Team Name");
+  if (!String(payload.recipient_team_name || "").trim())
+    missing.push("Recipient Team Name");
+  if (!String(payload.project_code || "").trim()) missing.push("Project Code");
+
+  // "If others, specify" is mandatory only when the group includes "Others"
+  if (
+    tf09HasOther(payload.lab_document_types) &&
+    !String(payload.lab_document_types_other || "").trim()
+  ) {
+    missing.push("Type of Document Received from Lab - If others, specify");
+  }
+
+  if (
+    tf09HasOther(payload.fae_expert_document_types) &&
+    !String(payload.fae_expert_document_types_other || "").trim()
+  ) {
+    missing.push(
+      "Type of document as FAE Report or Expert Report - If others, specify",
+    );
+  }
+
+  if (
+    tf09HasOther(payload.noc_document_types) &&
+    !String(payload.noc_document_types_other || "").trim()
+  ) {
+    missing.push("Type of document from NOC Team - If others, specify");
+  }
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+function tf09HasOther(checkedString) {
+  return (
+    String(checkedString || "")
+      .split(",")
+      .map(function (s) {
+        return s.trim();
+      })
+      .indexOf("Others") !== -1
+  );
+}
