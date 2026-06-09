@@ -5901,3 +5901,83 @@ function buildTF09EmailHtml(payload, submissionId) {
     </div>
   `;
 }
+
+function sendFQ14Email(payload, submissionId) {
+  const to = "spring.additionalstudies@perfactgroup.in";
+  const cc = [
+    buildTeamCc(payload.team_name),
+    "spring@perfactgroup.in",
+    "glacier@perfactgroup.in",
+    "kushalbhargava@perfactgroup.in",
+    payload.requestor_email,
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const subject = `WFP information sheet for Project- ${truncate(payload.project_name || "", 42)} with PCODE-${payload.pcode || ""}`;
+  const htmlBody = buildFQ14EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody,
+    name: "FQ14",
+    cc,
+  });
+}
+
+function buildFQ14EmailHtml(payload, submissionId) {
+  const esc = escapeHtml;
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const summaryRows = [
+    row("Submission ID", submissionId),
+    row(
+      "Requester Name",
+      `${payload.requestor_first_name || ""} ${payload.requestor_last_name || ""}`.trim(),
+    ),
+    row("Requester Email", payload.requestor_email || ""),
+    row("Team Name", payload.team_name || ""),
+    row("Company Name", payload.company_name || ""),
+    row("Project Name", payload.project_name || ""),
+    row("PCODE", payload.pcode || ""),
+    row("Category", payload.category || ""),
+    row("Sector", payload.sector || ""),
+    row("EAC Name", payload.eac_name || ""),
+  ].join("");
+
+  const detailRows = [
+    row("WFP sheet link", payload.wfp_sheet_link || ""),
+    row("Expected Target Date", payload.expected_target_date || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>WFP information sheet for Project- ${payload.project_name || ""} with PCODE-${payload.pcode || ""} has been submitted successfully.</p>
+
+      ${section("Submission Summary", summaryRows)}
+      ${section("Additional Details", detailRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>FQ14</p>
+    </div>
+  `;
+}

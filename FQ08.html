@@ -255,16 +255,16 @@
         return el ? el.value : "";
       }
 
-      function validate(p) {
+      function validateFQ08(payload) {
         const missing = [];
-        if (!p.requestor_email) missing.push("Email");
-        if (!p.team_name) missing.push("Team");
-        if (!p.project_name) missing.push("Project");
-        if (!p.pcode) missing.push("PCODE");
-        if (!p.type_of_project) missing.push("Type of Project");
-        if (!p.tor_letter_link) missing.push("TOR Letter");
-        if (!p.kml_kmz_link) missing.push("KML/KMZ");
-        if (!p.topo_map_link) missing.push("Topo Map");
+        if (!payload.requestor_email) missing.push("Email");
+        if (!payload.team_name) missing.push("Team");
+        if (!payload.project_name) missing.push("Project");
+        if (!payload.pcode) missing.push("PCODE");
+        if (!payload.type_of_project) missing.push("Type of Project");
+        if (!payload.tor_letter_link) missing.push("TOR Letter");
+        if (!payload.kml_kmz_link) missing.push("KML/KMZ");
+        if (!payload.topo_map_link) missing.push("Topo Map");
 
         if (missing.length) {
           alert("Please fill:\n\n" + missing.join("\n"));

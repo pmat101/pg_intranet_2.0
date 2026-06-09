@@ -6342,3 +6342,82 @@ function tf09HasOther(checkedString) {
       .indexOf("Others") !== -1
   );
 }
+
+function submitFQ14(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateFQ14(payload);
+
+  const sheet = db.getSheetByName("FQ14");
+  if (!sheet) throw new Error("Missing sheet: FQ14");
+
+  sheet.appendRow([
+    submissionId,
+    now,
+    payload.requestor_first_name || "",
+    payload.requestor_last_name || "",
+    payload.requestor_email || "",
+    payload.team_name || "",
+    payload.company_name || "",
+    payload.pcode || "",
+    payload.project_name || "",
+    payload.category || "",
+    payload.sector || "",
+    payload.eac_name || "",
+    payload.wfp_sheet_link || "",
+    payload.expected_target_date || "",
+    payload.remarks || "",
+  ]);
+
+  appendSubmissionLedger(db, {
+    submissionId,
+    formCode: "FQ14",
+    pcode: payload.pcode || "",
+    createdBy: payload.requestor_email || "",
+    now,
+    payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId,
+    formCode: "FQ14",
+    createdBy: payload.requestor_email || "",
+    now,
+    payload,
+  });
+
+  sendFQ14Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateFQ14(payload) {
+  const missing = [];
+
+  if (!String(payload.requestor_email || "").trim())
+    missing.push("Official Email ID of Requestor");
+  if (!String(payload.team_name || "").trim()) missing.push("Team Name");
+  if (!String(payload.company_name || "").trim()) missing.push("Company Name");
+  if (!String(payload.project_name || "").trim())
+    missing.push("Name of the project");
+  if (!String(payload.pcode || "").trim()) missing.push("PCODE");
+  if (!String(payload.wfp_sheet_link || "").trim())
+    missing.push("WFP sheet link");
+  if (!String(payload.expected_target_date || "").trim())
+    missing.push("Expected Target Date");
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
