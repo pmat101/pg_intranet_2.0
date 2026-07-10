@@ -356,6 +356,12 @@ function validateBD01AServer(payload) {
   ) {
     throw new Error("Please fill: Lead Source specify");
   }
+  if (
+    String(payload.workType || "").toLowerCase() === "others" &&
+    !String(payload.workTypeOtherSpecify || "").trim()
+  ) {
+    throw new Error("Please fill: Type of Work specify");
+  }
 
   const missing = required
     .filter(([key]) => !String(payload[key] || "").trim())
@@ -410,6 +416,7 @@ function appendBD01ARow(sheet, payload, submissionId, proposalID, pcode, now) {
     payload.leadSourceOtherSpecify || "",
     payload.rfqUrl || "",
     payload.remarks || "",
+    payload.workTypeOtherSpecify || "",
   ]);
 }
 
@@ -633,7 +640,6 @@ function validateBD03Server(payload) {
     ["team", "Team Name"],
     ["team_head_email", "Team Head Email ID"],
     ["csuite_officer_email", "C-Suite Officer Email ID"],
-    ["eia_coordinator_email", "EIA Coordinator Email"],
     ["customer_company", "Customer's Company Legal Name"],
     ["client_first_name", "Client First Name"],
     ["client_last_name", "Client Last Name"],

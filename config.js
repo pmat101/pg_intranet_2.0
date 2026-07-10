@@ -45,6 +45,7 @@ function getDropdownData() {
       "AAM",
       "ADR",
       "AIR",
+      "CCR",
       "CEO",
       "CFP",
       "CRE",
@@ -362,6 +363,7 @@ function getDropdownData() {
       "Saloni Sharma",
       "Santosh Pant",
       "Dr. Suresh Chandra Jain",
+      "N/A",
     ],
     country: [
       "Afghanistan",
@@ -916,6 +918,7 @@ function getNameEmailMap() {
     "Rashi Srivastava": "",
     "Ravi Sharma": "",
     "Sakshi Dahiya": "sakshi.dahiya@perfactgroup.in",
+    "N/A": "",
   };
 }
 

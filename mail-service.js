@@ -36,7 +36,7 @@ function buildWPF01EmailHtml(payload, submissionId) {
         ${cells
           .map(
             (c) =>
-              `<td style="border:1px solid #ccc;padding:6px;vertical-align:top;">${esc(
+              `<td style="border:1px solid #ccc;padding:6px;vertical-align:top;white-space:pre-wrap;">${esc(
                 String(c ?? ""),
               )}</td>`,
           )
@@ -79,8 +79,23 @@ function buildWPF01EmailHtml(payload, submissionId) {
     row(["Milestone achieved this week", payload.milestone_achieved || ""]),
     row(["Number of Active Projects", payload.number_of_active_projects || ""]),
     row(["Total Working Hours", payload.total_working_hours || ""]),
+    row(["Targets planned this week", payload.targets_planned_this_week || ""]),
+    row([
+      "Targets achieved this week",
+      payload.targets_achieved_this_week || "",
+    ]),
+    row(["Highlights", payload.highlights || ""]),
+    row([
+      "Low Points / Complaints Received",
+      payload.low_points_complaints || "",
+    ]),
+    row(["Challenges Faced", payload.challenges_faced || ""]),
     row(["Internal Bottlenecks", payload.internal_bottlenecks || ""]),
     row(["External Bottlenecks", payload.external_bottlenecks || ""]),
+    row([
+      "Projected Targets for Next Week",
+      payload.projected_targets_next_week || "",
+    ]),
   ].join("");
 
   const tfRows = (payload.tf_details || [])
@@ -213,6 +228,9 @@ function buildBD01AEmailHtml(payload, submissionId, proposalID, pcode) {
           ${row("Location", [payload.village, payload.taluka, payload.district, payload.state, payload.postalCode, payload.country].filter(Boolean).join(", "))}
           ${row("ST/UT", payload.stUt)}
           ${row("Work Type", payload.workType)}
+          ${
+            payload.workType && String(payload.workType).toLowerCase() === "others" ? row("Work Type Specify", payload.workTypeOtherSpecify) : ""
+          }
           ${row("Sector", payload.sector)}
           ${row("Specifications", payload.specs)}
           ${row("Financial Year", payload.finYear)}
@@ -812,6 +830,7 @@ function sendBD03Email(payload, submissionId) {
     "topmanagement@perfactgroup.in",
     "accounts@perfactgroup.in",
     "info@perfactgroup.in",
+    "priority.wg@perfactgroup.in",
     payload.team_head_email,
     otherEmails,
   ]

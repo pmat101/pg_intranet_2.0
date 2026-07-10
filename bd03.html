@@ -108,9 +108,9 @@
 
         <div class="form-group">
           <label class="form-label" for="eia_coordinator_email"
-            >EIA Coordinator Email <span class="required">*</span></label
+            >EIA Coordinator Email</label
           >
-          <input type="email" id="eia_coordinator_email" required />
+          <input type="email" id="eia_coordinator_email" />
         </div>
 
         <div class="form-section">
@@ -814,8 +814,6 @@
         if (!payload.team_head_email) missing.push("Team Head Email ID");
         if (!payload.csuite_officer_email)
           missing.push("C-Suite Officer Email ID");
-        if (!payload.eia_coordinator_email)
-          missing.push("EIA Coordinator Email");
         if (!payload.customer_company)
           missing.push("Customer's Company Legal Name");
         if (!payload.client_first_name) missing.push("Client First Name");
