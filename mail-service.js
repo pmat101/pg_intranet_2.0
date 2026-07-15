@@ -229,7 +229,10 @@ function buildBD01AEmailHtml(payload, submissionId, proposalID, pcode) {
           ${row("ST/UT", payload.stUt)}
           ${row("Work Type", payload.workType)}
           ${
-            payload.workType && String(payload.workType).toLowerCase() === "others" ? row("Work Type Specify", payload.workTypeOtherSpecify) : ""
+            payload.workType &&
+            String(payload.workType).toLowerCase() === "others"
+              ? row("Work Type Specify", payload.workTypeOtherSpecify)
+              : ""
           }
           ${row("Sector", payload.sector)}
           ${row("Specifications", payload.specs)}
@@ -5997,6 +6000,185 @@ function buildFQ14EmailHtml(payload, submissionId) {
       ${section("Additional Details", detailRows)}
 
       <p style="margin-top:18px;">Regards,<br/>FQ14</p>
+    </div>
+  `;
+}
+
+function sendMPF02Email(payload, submissionId) {
+  const to = payload.rm_email || "";
+  const cc = [
+    payload.email,
+    "hr@perfactgroup.in",
+    "accounts@perfactgroup.in",
+    "accreditation.wg@perfactgroup.in",
+    "topmanagement@perfactgroup.in",
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const expertName =
+    `${payload.name_first || ""} ${payload.name_last || ""}`.trim();
+  const subject = `Monthly Performance of Empanelled Expert ${payload.name_first || ""} ${payload.name_last || ""} for the month of ${payload.month || ""}`;
+  const htmlBody = buildMPF02EmailHtml(payload, submissionId);
+
+  GmailApp.sendEmail(to, subject, "HTML email required", {
+    htmlBody: htmlBody,
+    name: "MPF02",
+    cc: cc,
+  });
+}
+
+function buildMPF02EmailHtml(payload, submissionId) {
+  const esc = (v) =>
+    HtmlService.createHtmlOutput(String(v == null ? "" : v)).getContent();
+
+  function row(label, value) {
+    return `
+      <tr>
+        <td style="border:1px solid #ccc;padding:6px;background:#f5f5f5;font-weight:600;width:34%;">${esc(label)}</td>
+        <td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>
+      </tr>
+    `;
+  }
+
+  function section(title, rowsHtml) {
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function th(label) {
+    return `<th style="border:1px solid #ccc;padding:6px;background:#f5f5f5;">${esc(label)}</th>`;
+  }
+
+  function td(value) {
+    return `<td style="border:1px solid #ccc;padding:6px;">${esc(String(value || ""))}</td>`;
+  }
+
+  function subTable(title, headers, rows, cellsFn) {
+    const body =
+      rows && rows.length
+        ? rows.map((r, i) => `<tr>${td(i + 1)}${cellsFn(r)}</tr>`).join("")
+        : `<tr><td colspan="${headers.length + 1}" style="border:1px solid #ccc;padding:6px;">No entries</td></tr>`;
+    return `
+      <div style="margin-top:18px;">
+        <div style="font-weight:700;margin-bottom:8px;">${esc(title)}</div>
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <thead><tr>${th("#")}${headers.map(th).join("")}</tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const summaryRows = [
+    row("Submission ID", submissionId),
+    row("Month", payload.month || ""),
+    row(
+      "Name",
+      `${payload.name_first || ""} ${payload.name_last || ""}`.trim(),
+    ),
+    row("Employee Code", payload.employee_code || ""),
+    row("Email ID", payload.email || ""),
+    row("Area of Expertise", payload.area_of_expertise || ""),
+    row(
+      "Reporting Manager",
+      `${payload.rm_name_first || ""} ${payload.rm_name_last || ""}`.trim(),
+    ),
+    row("Reporting Manager Email", payload.rm_email || ""),
+    row("Visits Done", payload.visits_done || ""),
+    row("Meetings Attended", payload.meetings_attended || ""),
+    row("Reports Submitted", payload.reports_submitted || ""),
+  ].join("");
+
+  const narrativeRows = [
+    row("Targets planned this month", payload.targets_planned || ""),
+    row("Targets achieved this month", payload.targets_achieved || ""),
+    row("Highlights", payload.highlights || ""),
+    row("Low Points", payload.low_points || ""),
+    row("Challenges faced", payload.challenges_faced || ""),
+    row("Projected targets for next month", payload.projected_targets || ""),
+  ].join("");
+
+  const invoiceRows = [
+    row("Retention bill", payload.retention_bill_link || ""),
+    row("Travel reimbursement", payload.travel_reimbursement_link || ""),
+    row("Remarks", payload.remarks || ""),
+  ].join("");
+
+  const visitsTable = subTable(
+    "Visit details",
+    ["Start date", "End date", "Project name", "PCODE", "Location"],
+    payload.visits || [],
+    (r) =>
+      td(r.start_date) +
+      td(r.end_date) +
+      td(r.project_name) +
+      td(r.pcode) +
+      td(r.location),
+  );
+
+  const meetingsTable = subTable(
+    "Meeting details",
+    [
+      "Date",
+      "Project name",
+      "PCODE",
+      "Type of meeting",
+      "Guests / participants",
+      "Agenda",
+    ],
+    payload.meetings || [],
+    (r) =>
+      td(r.date) +
+      td(r.project_name) +
+      td(r.pcode) +
+      td(r.type_of_meeting) +
+      td(r.guests_participants) +
+      td(r.agenda),
+  );
+
+  const reportsTable = subTable(
+    "Report details",
+    ["Date", "Project name", "PCODE", "Remarks of client", "Feedback of EAC"],
+    payload.reports || [],
+    (r) =>
+      td(r.date) +
+      td(r.project_name) +
+      td(r.pcode) +
+      td(r.remarks_of_client) +
+      td(r.feedback_of_eac),
+  );
+
+  const billsTable = subTable(
+    "Project-wise bills",
+    ["Project name", "PCODE", "Link to bill"],
+    payload.bills || [],
+    (r) => td(r.project_name) + td(r.pcode) + td(r.link_to_bill),
+  );
+
+  return `
+    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.4;">
+      <p>Dear Team,</p>
+      <p>A Monthly Performance Form (MPF02) has been submitted for
+      ${payload.month || ""} by
+      ${payload.name_first || ""} ${payload.name_last || ""}
+      (${payload.employee_code || ""}).</p>
+
+      ${section("Submission Summary", summaryRows)}
+      ${visitsTable}
+      ${meetingsTable}
+      ${reportsTable}
+      ${section("Monthly Summary", narrativeRows)}
+      ${billsTable}
+      ${section("Monthly Invoices", invoiceRows)}
+
+      <p style="margin-top:18px;">Regards,<br/>MPF02</p>
     </div>
   `;
 }

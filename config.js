@@ -103,6 +103,8 @@ function getDropdownData() {
       "WLC",
       "WPM",
       "WTA",
+      "EEX",
+      "SEC",
       "other",
     ],
     sector: [
@@ -163,6 +165,7 @@ function getDropdownData() {
       "GB2",
       "GTA",
       "GEA",
+      "GEX",
       "GTR",
       "GPL",
       "BA0",

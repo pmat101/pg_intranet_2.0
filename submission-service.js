@@ -6427,3 +6427,200 @@ function validateFQ14(payload) {
     throw new Error("Please fill:\n\n" + missing.join("\n"));
   }
 }
+
+function submitMPF02(payload) {
+  const db = getDB();
+  const now = new Date();
+  const submissionId = Utilities.getUuid();
+
+  payload = payload || {};
+  payload.submission_id = submissionId;
+
+  validateMPF02(payload);
+
+  const mainSheet = db.getSheetByName("MPF02_main");
+  const visitsSheet = db.getSheetByName("MPF02_visits");
+  const meetingsSheet = db.getSheetByName("MPF02_meetings");
+  const reportsSheet = db.getSheetByName("MPF02_reports");
+  const billsSheet = db.getSheetByName("MPF02_bills");
+
+  if (!mainSheet) throw new Error("Missing sheet: MPF02_main");
+  if (!visitsSheet) throw new Error("Missing sheet: MPF02_visits");
+  if (!meetingsSheet) throw new Error("Missing sheet: MPF02_meetings");
+  if (!reportsSheet) throw new Error("Missing sheet: MPF02_reports");
+  if (!billsSheet) throw new Error("Missing sheet: MPF02_bills");
+
+  mainSheet.appendRow([
+    submissionId,
+    now,
+    payload.month || "",
+    payload.name_first || "",
+    payload.name_last || "",
+    payload.employee_code || "",
+    payload.email || "",
+    payload.area_of_expertise || "",
+    payload.rm_name_first || "",
+    payload.rm_name_last || "",
+    payload.rm_email || "",
+    payload.visits_done || "",
+    payload.meetings_attended || "",
+    payload.reports_submitted || "",
+    payload.targets_planned || "",
+    payload.targets_achieved || "",
+    payload.highlights || "",
+    payload.low_points || "",
+    payload.challenges_faced || "",
+    payload.projected_targets || "",
+    payload.retention_bill_link || "",
+    payload.travel_reimbursement_link || "",
+    payload.remarks || "",
+  ]);
+
+  (payload.visits || []).forEach(function (row, index) {
+    visitsSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.start_date || "",
+      row.end_date || "",
+      row.project_name || "",
+      row.pcode || "",
+      row.location || "",
+    ]);
+  });
+
+  (payload.meetings || []).forEach(function (row, index) {
+    meetingsSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.date || "",
+      row.project_name || "",
+      row.pcode || "",
+      row.type_of_meeting || "",
+      row.guests_participants || "",
+      row.agenda || "",
+    ]);
+  });
+
+  (payload.reports || []).forEach(function (row, index) {
+    reportsSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.date || "",
+      row.project_name || "",
+      row.pcode || "",
+      row.remarks_of_client || "",
+      row.feedback_of_eac || "",
+    ]);
+  });
+
+  (payload.bills || []).forEach(function (row, index) {
+    billsSheet.appendRow([
+      submissionId,
+      index + 1,
+      row.project_name || "",
+      row.pcode || "",
+      row.link_to_bill || "",
+    ]);
+  });
+
+  appendSubmissionLedger(db, {
+    submissionId: submissionId,
+    formCode: "MPF02",
+    pcode: firstPcodeFromMPF02(payload),
+    createdBy: payload.email || "",
+    now: now,
+    payload: payload,
+  });
+
+  appendAuditLog(db, {
+    submissionId: submissionId,
+    formCode: "MPF02",
+    createdBy: payload.email || "",
+    now: now,
+    payload: payload,
+  });
+
+  sendMPF02Email(payload, submissionId);
+
+  return {
+    ok: true,
+    submission_id: submissionId,
+    thankYouHtml: HtmlService.createTemplateFromFile("thankyou")
+      .evaluate()
+      .getContent(),
+  };
+}
+
+function validateMPF02(payload) {
+  const missing = [];
+
+  if (!String(payload.month || "").trim()) missing.push("Month");
+  if (!String(payload.employee_code || "").trim())
+    missing.push("Employee Code");
+  if (!String(payload.email || "").trim()) missing.push("Email ID");
+  if (!String(payload.rm_email || "").trim())
+    missing.push("Reporting Manager Email ID");
+  if (!String(payload.visits_done || "").trim()) missing.push("Visits Done");
+  if (!String(payload.meetings_attended || "").trim())
+    missing.push("Meetings Attended");
+  if (!String(payload.reports_submitted || "").trim())
+    missing.push("Reports Submitted");
+
+  const visits = Array.isArray(payload.visits) ? payload.visits : [];
+  const meetings = Array.isArray(payload.meetings) ? payload.meetings : [];
+  const reports = Array.isArray(payload.reports) ? payload.reports : [];
+  const bills = Array.isArray(payload.bills) ? payload.bills : [];
+
+  if (payload.visits_done === "Yes" && !visits.length)
+    missing.push("At least one Visit entry");
+  if (payload.meetings_attended === "Yes" && !meetings.length)
+    missing.push("At least one Meeting entry");
+  if (payload.reports_submitted === "Yes" && !reports.length)
+    missing.push("At least one Report entry");
+
+  visits.forEach(function (r, i) {
+    if (!String(r.project_name || "").trim())
+      missing.push("Visit row " + (i + 1) + " - Project name");
+    if (!String(r.pcode || "").trim())
+      missing.push("Visit row " + (i + 1) + " - PCODE");
+  });
+  meetings.forEach(function (r, i) {
+    if (!String(r.project_name || "").trim())
+      missing.push("Meeting row " + (i + 1) + " - Project name");
+    if (!String(r.pcode || "").trim())
+      missing.push("Meeting row " + (i + 1) + " - PCODE");
+  });
+  reports.forEach(function (r, i) {
+    if (!String(r.project_name || "").trim())
+      missing.push("Report row " + (i + 1) + " - Project name");
+    if (!String(r.pcode || "").trim())
+      missing.push("Report row " + (i + 1) + " - PCODE");
+  });
+  bills.forEach(function (r, i) {
+    if (!String(r.project_name || "").trim())
+      missing.push("Project-wise bill row " + (i + 1) + " - Project name");
+    if (!String(r.pcode || "").trim())
+      missing.push("Project-wise bill row " + (i + 1) + " - PCODE");
+  });
+
+  if (missing.length) {
+    throw new Error("Please fill:\n\n" + missing.join("\n"));
+  }
+}
+
+// Returns the first PCODE found across the subforms, for the submission ledger.
+function firstPcodeFromMPF02(payload) {
+  const groups = [
+    payload.visits,
+    payload.meetings,
+    payload.reports,
+    payload.bills,
+  ];
+  for (let g = 0; g < groups.length; g++) {
+    const arr = Array.isArray(groups[g]) ? groups[g] : [];
+    for (let i = 0; i < arr.length; i++) {
+      if (String(arr[i].pcode || "").trim()) return String(arr[i].pcode).trim();
+    }
+  }
+  return "";
+}
