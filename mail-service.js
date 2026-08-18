@@ -5807,10 +5807,8 @@ function buildACC02EmailHtml(payload, submissionId) {
 }
 
 function sendTF09Email(payload, submissionId) {
-  // Primary recipient: the submitter and the recipient team mailbox
   const to = `${payload.employee_email}`;
 
-  // CC: the sending team, plus standard distribution
   const cc = `${buildTeamCc(payload.from_team_name)}, ${buildTeamCc(payload.recipient_team_name)}, topmanagement@perfactgroup.in`;
 
   const subject = `Documents shared from ${payload.from_team_name || ""} to ${payload.recipient_team_name || ""} for Project- ${truncate(payload.project_name || "", 42)} with PCODE- ${payload.project_code || ""}`;
@@ -5820,7 +5818,7 @@ function sendTF09Email(payload, submissionId) {
   GmailApp.sendEmail(to, subject, "HTML email required", {
     htmlBody: htmlBody,
     name: "TF09",
-    // cc: cc,
+    cc: cc,
   });
 }
 
